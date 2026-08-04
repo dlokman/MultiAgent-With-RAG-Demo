@@ -1,7 +1,10 @@
-# agent knowledge base
-echo "deploying knowledge base ..."
-python prereqs/knowledge_base.py --mode create
+# execute in git bash on windows
 
-# agent dynamodb
-echo "deploying DynamoDB ..."
+echo "create collection group and collection ..."
+python step_1_create_opensearch_collection.py
+
+echo "create knowledge base ..."
+python step_2-create_or_retrieve_knowledge_base.py
+
+echo "create DynamoDB ..."
 python prereqs/dynamodb.py --mode create

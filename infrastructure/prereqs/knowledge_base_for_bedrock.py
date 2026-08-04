@@ -1,13 +1,4 @@
-# Copyright 2024 Amazon.com and its affiliates; all rights reserved.
-# This file is AWS Content and may not be duplicated or distributed without permission
-
-"""
-This module contains a helper class for building and using Knowledge Bases for Amazon Bedrock.
-The KnowledgeBasesForAmazonBedrock class provides a convenient interface for working with Knowledge Bases.
-It includes methods for creating, updating, and invoking Knowledge Bases, as well as managing
-IAM roles and OpenSearch Serverless.
-"""
-
+from utils import interactive_sleep
 import argparse
 import json
 import os
@@ -16,7 +7,6 @@ import time
 import uuid
 
 import boto3
-import yaml
 from botocore.exceptions import ClientError
 from opensearchpy import (
     AWSV4SignerAuth,
@@ -32,35 +22,8 @@ valid_embedding_models = [
     "amazon.titan-embed-text-v1",
     "amazon.titan-embed-text-v2:0",
 ]
+
 pp = pprint.PrettyPrinter(indent=2)
-
-
-def read_yaml_file(file_path: str):
-    """
-    read and process a yaml file
-    Args:
-        file_path: the path to the yaml file
-    """
-    with open(file_path, "r") as file:
-        try:
-            return yaml.safe_load(file)
-        except yaml.YAMLError as e:
-            print(f"Error reading YAML file: {e}")
-            return None
-
-
-def interactive_sleep(seconds: int):
-    """
-    Support functionality to induce an artificial 'sleep' to the code in order to wait for resources to be available
-    Args:
-        seconds (int): number of seconds to sleep for
-    """
-    dots = ""
-    for i in range(seconds):
-        dots += "."
-        print(dots, end="\r")
-        time.sleep(1)
-
 
 class KnowledgeBasesForAmazonBedrock:
     """
@@ -71,46 +34,44 @@ class KnowledgeBasesForAmazonBedrock:
         - Deletion of all resources created
     """
 
-    def __init__(self, suffix=None):
+    #done
+    def __init__(self, region_name, collection_name, suffix=None):
         """
         Class initializer
         """
-        boto3_session = boto3.Session()
+        boto3_session = boto3.Session(region_name=region_name)
         self.region_name = boto3_session.region_name
+        self.collection_name = collection_name
+
         self.iam_client = boto3_session.client("iam", region_name=self.region_name)
-        self.account_number = (
-            boto3.client("sts", region_name=self.region_name)
-            .get_caller_identity()
-            .get("Account")
-        )
+
+        self.account_number = (boto3.client("sts", region_name=self.region_name).get_caller_identity().get("Account"))
 
         if suffix is not None:
             self.suffix = suffix
         else:
             self.suffix = str(uuid.uuid4())[:8]
 
-        self.identity = boto3.client(
-            "sts", region_name=self.region_name
-        ).get_caller_identity()["Arn"]
-        self.aoss_client = boto3_session.client(
-            "opensearchserverless", region_name=self.region_name
-        )
+        self.identity = boto3.client("sts", region_name=self.region_name).get_caller_identity()["Arn"]
+
+        self.aoss_client = boto3_session.client("opensearchserverless", region_name=self.region_name)
+
         self.s3_client = boto3.client("s3", region_name=self.region_name)
-        self.bedrock_agent_client = boto3.client(
-            "bedrock-agent", region_name=self.region_name
-        )
+
+        self.bedrock_agent_client = boto3.client("bedrock-agent", region_name=self.region_name)
 
         credentials = boto3.Session().get_credentials()
         self.awsauth = AWSV4SignerAuth(credentials, self.region_name, "aoss")
         self.oss_client = None
         self.data_bucket_name = None
 
+    #done
     def create_or_retrieve_knowledge_base(
         self,
         kb_name: str,
         kb_description: str = None,
         data_bucket_name: str = None,
-        embedding_model: str = "amazon.titan-embed-text-v2:0",
+        embedding_model: str = "cohere.embed-english-v3",
     ):
         """
         Function used to create a new Knowledge Base or retrieve an existent one
@@ -125,14 +86,17 @@ class KnowledgeBasesForAmazonBedrock:
             kb_id: str - Knowledge base id
             ds_id: str - Data Source id
         """
+
         kb_id = None
         ds_id = None
         kbs_available = self.bedrock_agent_client.list_knowledge_bases(
             maxResults=100,
         )
+
         for kb in kbs_available["knowledgeBaseSummaries"]:
             if kb_name == kb["name"]:
                 kb_id = kb["knowledgeBaseId"]
+
         if kb_id is not None:
             ds_available = self.bedrock_agent_client.list_data_sources(
                 knowledgeBaseId=kb_id,
@@ -142,9 +106,7 @@ class KnowledgeBasesForAmazonBedrock:
                 if kb_id == ds["knowledgeBaseId"]:
                     ds_id = ds["dataSourceId"]
                     if not data_bucket_name:
-                        self.data_bucket_name = self._get_knowledge_base_s3_bucket(
-                            kb_id, ds_id
-                        )
+                        self.data_bucket_name = self._get_knowledge_base_s3_bucket(kb_id, ds_id)
             print(f"Knowledge Base {kb_name} already exists.")
             print(f"Retrieved Knowledge Base Id: {kb_id}")
             print(f"Retrieved Data Source Id: {ds_id}")
@@ -164,19 +126,19 @@ class KnowledgeBasesForAmazonBedrock:
                     f"Invalid embedding model. Your embedding model should be one of {valid_embeddings_str}"
                 )
             # self.embedding_model = embedding_model
+
             encryption_policy_name = f"{kb_name}-sp-{self.suffix}"
             network_policy_name = f"{kb_name}-np-{self.suffix}"
             access_policy_name = f"{kb_name}-ap-{self.suffix}"
-            kb_execution_role_name = (
-                f"AmazonBedrockExecutionRoleForKnowledgeBase_{self.suffix}"
-            )
-            fm_policy_name = (
-                f"AmazonBedrockFoundationModelPolicyForKnowledgeBase_{self.suffix}"
-            )
-            s3_policy_name = f"AmazonBedrockS3PolicyForKnowledgeBase_{self.suffix}"
-            oss_policy_name = f"AmazonBedrockOSSPolicyForKnowledgeBase_{self.suffix}"
-            vector_store_name = f"{kb_name}-{self.suffix}"
-            index_name = f"{kb_name}-index-{self.suffix}"
+
+            kb_execution_role_name = f"AmazonBedrockExecutionRoleForKnowledgeBase_{kb_name}_{self.suffix}"
+            fm_policy_name = f"AmazonBedrockFoundationModelPolicyForKnowledgeBase_{kb_name}_{self.suffix}"
+            s3_policy_name = f"AmazonBedrockS3PolicyForKnowledgeBase_{kb_name}_{self.suffix}"
+            oss_policy_name = f"AmazonBedrockOSSPolicyForKnowledgeBase_{kb_name}_{self.suffix}"
+
+            collection_name  = self.collection_name
+            index_name = f"{kb_name}-index"  #vector index name. 1:1 mapping. Each Knowledge Base has its own vector index.
+
             print(
                 "========================================================================================"
             )
@@ -184,6 +146,7 @@ class KnowledgeBasesForAmazonBedrock:
                 f"Step 1 - Creating or retrieving {data_bucket_name} S3 bucket for Knowledge Base documents"
             )
             self.create_s3_bucket(data_bucket_name)
+
             print(
                 "========================================================================================"
             )
@@ -197,6 +160,7 @@ class KnowledgeBasesForAmazonBedrock:
                 s3_policy_name,
                 kb_execution_role_name,
             )
+
             print(
                 "========================================================================================"
             )
@@ -204,21 +168,21 @@ class KnowledgeBasesForAmazonBedrock:
             encryption_policy, network_policy, access_policy = (
                 self.create_policies_in_oss(
                     encryption_policy_name,
-                    vector_store_name,
+                    collection_name,
                     network_policy_name,
                     bedrock_kb_execution_role,
                     access_policy_name,
                 )
             )
+
             print(
                 "========================================================================================"
             )
             print(
                 "Step 4 - Creating OSS Collection (this step takes a couple of minutes to complete)"
             )
-            host, collection, collection_id, collection_arn = self.create_oss(
-                vector_store_name, oss_policy_name, bedrock_kb_execution_role
-            )
+            host, collection, collection_id, collection_arn = self.configure_opensearch(collection_name, oss_policy_name, bedrock_kb_execution_role)
+
             # Build the OpenSearch client
             self.oss_client = OpenSearch(
                 hosts=[{"host": host, "port": 443}],
@@ -234,6 +198,7 @@ class KnowledgeBasesForAmazonBedrock:
             )
             print("Step 5 - Creating OSS Vector Index")
             self.create_vector_index(index_name)
+
             print(
                 "========================================================================================"
             )
@@ -248,13 +213,15 @@ class KnowledgeBasesForAmazonBedrock:
                 bedrock_kb_execution_role,
             )
             interactive_sleep(60)
-            print(
-                "========================================================================================"
-            )
+
+            print("========================================================================================")
+
             kb_id = knowledge_base["knowledgeBaseId"]
             ds_id = data_source["dataSourceId"]
+
         return kb_id, ds_id
 
+    #done
     def create_s3_bucket(self, bucket_name: str):
         """
         Check if bucket exists, and if not create S3 bucket for knowledge base data source
@@ -263,7 +230,7 @@ class KnowledgeBasesForAmazonBedrock:
         """
         self.data_bucket_name = bucket_name
         try:
-            self.s3_client.head_bucket(Bucket=bucket_name)
+            self.s3_client.head_bucket(Bucket=bucket_name)  # check if bucket exists. if doesn't exist, will throw an exception
             print(f"Bucket {bucket_name} already exists - retrieving it!")
         except ClientError:
             print(f"Creating bucket {bucket_name}")
@@ -275,24 +242,15 @@ class KnowledgeBasesForAmazonBedrock:
                     CreateBucketConfiguration={"LocationConstraint": self.region_name},
                 )
 
-    def upload_directory(self, s3_path, bucket_name):
-        """
-        Upload files from a local path to s3
-            s3_path: local path of the document
-            bucket_name: bucket name
-        """
-        for root, dirs, files in os.walk(s3_path):
-            for file in files:
-                file_to_upload = os.path.join(root, file)
-                print(f"uploading file {file_to_upload} to {bucket_name}")
-                self.s3_client.upload_file(file_to_upload, bucket_name, file)
 
+    #done
     def get_data_bucket_name(self):
         """
         get the name of the data bucket
         """
         return self.data_bucket_name
 
+    #done
     def _get_knowledge_base_s3_bucket(self, knowledge_base_id, data_source_id):
         """Get the s3 bucket associated with a knowledge base, if there is one"""
         try:
@@ -318,6 +276,7 @@ class KnowledgeBasesForAmazonBedrock:
             print(f"Error retrieving data source information: {str(e)}")
             return None
 
+    #done
     def create_bedrock_kb_execution_role(
         self,
         embedding_model: str,
@@ -436,6 +395,7 @@ class KnowledgeBasesForAmazonBedrock:
         )
         return bedrock_kb_execution_role
 
+    #done
     def create_oss_policy_attach_bedrock_execution_role(
         self, collection_id: str, oss_policy_name: str, bedrock_kb_execution_role: str
     ):
@@ -466,6 +426,7 @@ class KnowledgeBasesForAmazonBedrock:
 
         oss_policy_arn = f"arn:aws:iam::{self.account_number}:policy/{oss_policy_name}"
         created = False
+
         try:
             self.iam_client.create_policy(
                 PolicyName=oss_policy_name,
@@ -483,10 +444,11 @@ class KnowledgeBasesForAmazonBedrock:
         )
         return created
 
+    #done
     def create_policies_in_oss(
         self,
         encryption_policy_name: str,
-        vector_store_name: str,
+        collection_name: str,
         network_policy_name: str,
         bedrock_kb_execution_role: str,
         access_policy_name: str,
@@ -496,7 +458,7 @@ class KnowledgeBasesForAmazonBedrock:
         If policies already exist, retrieve them
         Args:
             encryption_policy_name: name of the data encryption policy
-            vector_store_name: name of the vector store
+            collection_name: name of the vector store
             network_policy_name: name of the network policy
             bedrock_kb_execution_role: name of the knowledge base execution role
             access_policy_name: name of the data access policy
@@ -511,7 +473,7 @@ class KnowledgeBasesForAmazonBedrock:
                     {
                         "Rules": [
                             {
-                                "Resource": ["collection/" + vector_store_name],
+                                "Resource": ["collection/" + collection_name],
                                 "ResourceType": "collection",
                             }
                         ],
@@ -534,7 +496,7 @@ class KnowledgeBasesForAmazonBedrock:
                         {
                             "Rules": [
                                 {
-                                    "Resource": ["collection/" + vector_store_name],
+                                    "Resource": ["collection/" + collection_name],
                                     "ResourceType": "collection",
                                 }
                             ],
@@ -558,7 +520,7 @@ class KnowledgeBasesForAmazonBedrock:
                         {
                             "Rules": [
                                 {
-                                    "Resource": ["collection/" + vector_store_name],
+                                    "Resource": ["collection/" + collection_name],
                                     "Permission": [
                                         "aoss:CreateCollectionItems",
                                         "aoss:DeleteCollectionItems",
@@ -568,7 +530,7 @@ class KnowledgeBasesForAmazonBedrock:
                                     "ResourceType": "collection",
                                 },
                                 {
-                                    "Resource": ["index/" + vector_store_name + "/*"],
+                                    "Resource": ["index/" + collection_name + "/*"],
                                     "Permission": [
                                         "aoss:CreateIndex",
                                         "aoss:DeleteIndex",
@@ -597,69 +559,59 @@ class KnowledgeBasesForAmazonBedrock:
             )
         return encryption_policy, network_policy, access_policy
 
-    def create_oss(
+    #done
+    def configure_opensearch(
         self,
-        vector_store_name: str,
+        collection_name: str,
         oss_policy_name: str,
         bedrock_kb_execution_role: str,
     ):
         """
-        Create OpenSearch Serverless Collection. If already existent, retrieve
+        OpenSearch Serverless Collection should already be created via step_1_create_opensearch_collection.py. Create oss policy and attach it to bedrock execution role
         Args:
-            vector_store_name: name of the vector store
+            collection_name: name of the vector store
             oss_policy_name: name of the opensearch serverless access policy
             bedrock_kb_execution_role: name of the knowledge base execution role
         """
-        try:
-            collection = self.aoss_client.create_collection(
-                name=vector_store_name, type="VECTORSEARCH"
+
+        response = self.aoss_client.batch_get_collection(names=[collection_name])
+
+        if not response["collectionDetails"]:
+            raise ValueError(
+                f"OpenSearch collection '{collection_name}' does not exist."
             )
-            collection_id = collection["createCollectionDetail"]["id"]
-            collection_arn = collection["createCollectionDetail"]["arn"]
-        except self.aoss_client.exceptions.ConflictException:
-            collection = self.aoss_client.batch_get_collection(
-                names=[vector_store_name]
-            )["collectionDetails"][0]
-            pp.pprint(collection)
-            collection_id = collection["id"]
-            collection_arn = collection["arn"]
-        pp.pprint(collection)
+
+        collection = response["collectionDetails"][0]
+
+        collection_id = collection["id"]
+        collection_arn = collection["arn"]
 
         # Get the OpenSearch serverless collection URL
         host = collection_id + "." + self.region_name + ".aoss.amazonaws.com"
         print(host)
-        # wait for collection creation
-        # This can take couple of minutes to finish
-        response = self.aoss_client.batch_get_collection(names=[vector_store_name])
-        # Periodically check collection status
-        while (response["collectionDetails"][0]["status"]) == "CREATING":
-            print("Creating collection...")
-            interactive_sleep(30)
-            response = self.aoss_client.batch_get_collection(names=[vector_store_name])
-        print("\nCollection successfully created:")
-        pp.pprint(response["collectionDetails"])
+
         # create opensearch serverless access policy and attach it to Bedrock execution role
         try:
-            created = self.create_oss_policy_attach_bedrock_execution_role(
-                collection_id, oss_policy_name, bedrock_kb_execution_role
-            )
+            created = self.create_oss_policy_attach_bedrock_execution_role(collection_id, oss_policy_name, bedrock_kb_execution_role)
             if created:
                 # It can take up to a minute for data access rules to be enforced
-                print(
-                    "Sleeping for a minute to ensure data access rules have been enforced"
-                )
+                print("Sleeping for a minute to ensure data access rules have been enforced")
                 interactive_sleep(60)
             return host, collection, collection_id, collection_arn
         except Exception as e:
             print("Policy already exists")
             pp.pprint(e)
 
+    #done
     def create_vector_index(self, index_name: str):
         """
         Create OpenSearch Serverless vector index. If existent, ignore
         Args:
             index_name: name of the vector index
         """
+
+        # update embedding to be cohere above and "space_type": "cosinesimil"
+
         body_json = {
             "settings": {
                 "index.knn": "true",
@@ -675,7 +627,7 @@ class KnowledgeBasesForAmazonBedrock:
                         "method": {
                             "name": "hnsw",
                             "engine": "faiss",
-                            "space_type": "l2",
+                            "space_type": "cosinesimil",
                         },
                     },
                     "text": {"type": "text"},
@@ -702,6 +654,7 @@ class KnowledgeBasesForAmazonBedrock:
                 f"delete, and recreate the index"
             )
 
+    #done
     @retry(wait_random_min=1000, wait_random_max=2000, stop_max_attempt_number=7)
     def create_knowledge_base(
         self,
@@ -803,7 +756,7 @@ class KnowledgeBasesForAmazonBedrock:
                 name=kb_name,
                 description=kb_description,
                 knowledgeBaseId=kb["knowledgeBaseId"],
-                dataDeletionPolicy="RETAIN",
+                dataDeletionPolicy="DELETE",    #  Delete Data when DataSource is Deleted
                 dataSourceConfiguration={
                     "type": "S3",
                     "s3Configuration": s3_configuration,
@@ -825,6 +778,33 @@ class KnowledgeBasesForAmazonBedrock:
             pp.pprint(ds)
         return kb, ds
 
+
+    #done. not being used
+    def get_kb(self, kb_id):
+        """
+        Get KB details
+        Args:
+            kb_id: knowledge base id
+        """
+        get_job_response = self.bedrock_agent_client.get_knowledge_base(
+            knowledgeBaseId=kb_id
+        )
+        return get_job_response
+
+    #done
+    def upload_directory(self, s3_path, bucket_name):
+        """
+        Upload files from a local path to s3
+            s3_path: local path of the document
+            bucket_name: bucket name
+        """
+        for root, dirs, files in os.walk(s3_path):
+            for file in files:
+                file_to_upload = os.path.join(root, file)
+                print(f"uploading file {file_to_upload} to {bucket_name}")
+                self.s3_client.upload_file(file_to_upload, bucket_name, file)
+
+    #done
     def synchronize_data(self, kb_id, ds_id):
         """
         Start an ingestion job to synchronize data from an S3 bucket to the Knowledge Base
@@ -836,16 +816,13 @@ class KnowledgeBasesForAmazonBedrock:
         # ensure that the kb is available
         i_status = ["CREATING", "DELETING", "UPDATING"]
         while (
-            self.bedrock_agent_client.get_knowledge_base(knowledgeBaseId=kb_id)[
-                "knowledgeBase"
-            ]["status"]
-            in i_status
+            self.bedrock_agent_client.get_knowledge_base(knowledgeBaseId=kb_id)["knowledgeBase"]["status"] in i_status
         ):
             time.sleep(10)
+
         # Start an ingestion job
-        start_job_response = self.bedrock_agent_client.start_ingestion_job(
-            knowledgeBaseId=kb_id, dataSourceId=ds_id
-        )
+        start_job_response = self.bedrock_agent_client.start_ingestion_job(knowledgeBaseId=kb_id, dataSourceId=ds_id)
+
         job = start_job_response["ingestionJob"]
         pp.pprint(job)
         # Get job
@@ -860,26 +837,15 @@ class KnowledgeBasesForAmazonBedrock:
         pp.pprint(job)
         # interactive_sleep(40)
 
-    def get_kb(self, kb_id):
-        """
-        Get KB details
-        Args:
-            kb_id: knowledge base id
-        """
-        get_job_response = self.bedrock_agent_client.get_knowledge_base(
-            knowledgeBaseId=kb_id
-        )
-        return get_job_response
 
 
-
-
+	#done
     def delete_kb(
         self,
         kb_name: str,
         delete_s3_bucket: bool = True,
         delete_iam_roles_and_policies: bool = True,
-        delete_aoss: bool = True,
+        delete_opensearch: bool = True,
     ):
         """
         Delete the Knowledge Base resources
@@ -887,7 +853,7 @@ class KnowledgeBasesForAmazonBedrock:
             kb_name: name of the knowledge base to delete
             delete_s3_bucket (bool): boolean to indicate if s3 bucket should also be deleted
             delete_iam_roles_and_policies (bool): boolean to indicate if IAM roles and Policies should also be deleted
-            delete_aoss: boolean to indicate if amazon opensearch serverless resources should also be deleted
+            delete_opensearch: boolean to indicate if amazon opensearch serverless resources should also be deleted
         """
         kbs_available = self.bedrock_agent_client.list_knowledge_bases(
             maxResults=100,
@@ -899,9 +865,11 @@ class KnowledgeBasesForAmazonBedrock:
                 kb_id = kb["knowledgeBaseId"]
         kb_details = self.bedrock_agent_client.get_knowledge_base(knowledgeBaseId=kb_id)
         kb_role = kb_details["knowledgeBase"]["roleArn"].split("/")[1]
+
         collection_id = kb_details["knowledgeBase"]["storageConfiguration"][
             "opensearchServerlessConfiguration"
         ]["collectionArn"].split("/")[1]
+
         index_name = kb_details["knowledgeBase"]["storageConfiguration"][
             "opensearchServerlessConfiguration"
         ]["vectorIndexName"]
@@ -944,6 +912,7 @@ class KnowledgeBasesForAmazonBedrock:
         bucket_name = ds_details["dataSource"]["dataSourceConfiguration"][
             "s3Configuration"
         ]["bucketArn"].replace("arn:aws:s3:::", "")
+
         try:
             self.bedrock_agent_client.delete_data_source(
                 dataSourceId=ds_id, knowledgeBaseId=kb_id
@@ -951,12 +920,14 @@ class KnowledgeBasesForAmazonBedrock:
             print("Data Source deleted successfully!")
         except Exception as e:
             print(e)
+
         try:
             self.bedrock_agent_client.delete_knowledge_base(knowledgeBaseId=kb_id)
             print("Knowledge Base deleted successfully!")
         except Exception as e:
             print(e)
-        if delete_aoss:
+
+        if delete_opensearch:
             try:
                 self.oss_client.indices.delete(index=index_name)
                 print("OpenSource Serveless Index deleted successfully!")
@@ -967,6 +938,7 @@ class KnowledgeBasesForAmazonBedrock:
                 print("OpenSource Collection Index deleted successfully!")
             except Exception as e:
                 print(e)
+
             try:
                 self.aoss_client.delete_access_policy(
                     type="data", name=access_policy_name
@@ -974,6 +946,7 @@ class KnowledgeBasesForAmazonBedrock:
                 print("OpenSource Serveless access policy deleted successfully!")
             except Exception as e:
                 print(e)
+
             try:
                 self.aoss_client.delete_security_policy(
                     type="network", name=network_policy_name
@@ -981,6 +954,7 @@ class KnowledgeBasesForAmazonBedrock:
                 print("OpenSource Serveless network policy deleted successfully!")
             except Exception as e:
                 print(e)
+
             try:
                 self.aoss_client.delete_security_policy(
                     type="encryption", name=encryption_policy_name
@@ -988,20 +962,24 @@ class KnowledgeBasesForAmazonBedrock:
                 print("OpenSource Serveless encryption policy deleted successfully!")
             except Exception as e:
                 print(e)
+
         if delete_s3_bucket:
             try:
                 self.delete_s3(bucket_name)
                 print("Knowledge Base S3 bucket deleted successfully!")
             except Exception as e:
                 print(e)
+
         if delete_iam_roles_and_policies:
             try:
                 self.delete_iam_roles_and_policies(kb_role)
                 print("Knowledge Base Roles and Policies deleted successfully!")
             except Exception as e:
                 print(e)
+
         print("Resources deleted successfully!")
 
+	#done
     def delete_iam_roles_and_policies(self, kb_execution_role_name: str):
         """
         Delete IAM Roles and policies used by the Knowledge Base
@@ -1019,9 +997,12 @@ class KnowledgeBasesForAmazonBedrock:
                 RoleName=kb_execution_role_name, PolicyArn=policy
             )
             self.iam_client.delete_policy(PolicyArn=policy)
+
         self.iam_client.delete_role(RoleName=kb_execution_role_name)
+
         return 0
 
+	#done
     def delete_s3(self, bucket_name: str):
         """
         Delete the objects contained in the Knowledge Base S3 bucket.
@@ -1031,49 +1012,10 @@ class KnowledgeBasesForAmazonBedrock:
 
         """
         objects = self.s3_client.list_objects(Bucket=bucket_name)
+
+		#first empty s3 bucket
         if "Contents" in objects:
             for obj in objects["Contents"]:
                 self.s3_client.delete_object(Bucket=bucket_name, Key=obj["Key"])
+
         self.s3_client.delete_bucket(Bucket=bucket_name)
-
-
-if __name__ == "__main__":
-    kb = KnowledgeBasesForAmazonBedrock()
-    smm_client = boto3.client("ssm")
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-
-    # Example usage:
-    config_path = f"{current_dir}/prereqs_config.yaml"
-    data = read_yaml_file(config_path)
-
-    parser = argparse.ArgumentParser(description="Knowledge Base handler")
-    parser.add_argument(
-        "--mode",
-        required=True,
-        help="Knowledge Base helper model. One for: create or delete.",
-    )
-
-    args = parser.parse_args()
-
-    print(data)
-    if args.mode == "create":
-        kb_id, ds_id = kb.create_or_retrieve_knowledge_base(
-            data["knowledge_base_name"], data["knowledge_base_description"]
-        )
-        print(f"Knowledge Base ID: {kb_id}")
-        print(f"Data Source ID: {ds_id}")
-        kb.upload_directory(
-            f"{current_dir}/{data['kb_files_path']}", kb.get_data_bucket_name()
-        )
-        kb.synchronize_data(kb_id, ds_id)
-        smm_client.put_parameter(
-            Name=f"{data['knowledge_base_name']}-kb-id",
-            Description=f"{data['knowledge_base_name']} kb id",
-            Value=kb_id,
-            Type="String",
-            Overwrite=True,
-        )
-
-    if args.mode == "delete":
-        kb.delete_kb(data["knowledge_base_name"])
-        smm_client.delete_parameter(Name=f"{data['knowledge_base_name']}-kb-id")
