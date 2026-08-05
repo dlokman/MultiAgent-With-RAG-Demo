@@ -25,21 +25,7 @@ def verify_knowledge_base_exists(region_name, knowledge_base_name):
             f"Knowledge Base: '{knowledge_base_name}' does not exist."
         )
 
-
-if __name__ == "__main__":
-
-    region_name="us-east-2"
-
-    collection_group_name = "restaurant-collection-group"  #Needed for OpenSearch Serverless NextGen
-    collection_name = "restaurant-collection"
-
-    # Delete This Knowledge Base Name
-    knowledge_base_name = "restaurant-assistant-kb"
-    knowledge_base_description = "Knowledge Base for Restaurant Assistant Application"
-
-    #Knowledge Base will be created for these Files (Vector Embeddings Will be stored in OpenSearch Serverless Vector Index)
-    kb_files_path = "kb_files"
-
+def delete_knowledge_base(region_name, collection_group_name, collection_name, knowledge_base_name, knowledge_base_description):
     verify_knowledge_base_exists(region_name, knowledge_base_name)
 
     kb = KnowledgeBasesForAmazonBedrock(region_name=region_name, collection_name=collection_name)
@@ -50,8 +36,9 @@ if __name__ == "__main__":
     print(f"Knowledge Base ID: {kb_id}")
     print(f"Data Source ID: {ds_id}")
 
-
     kb.delete_kb(knowledge_base_name)
 
     smm_client = boto3.client("ssm") # Systems Manager
     smm_client.delete_parameter(Name=f"{knowledge_base_name}-id")
+
+

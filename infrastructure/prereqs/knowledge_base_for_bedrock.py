@@ -33,7 +33,6 @@ class KnowledgeBasesForAmazonBedrock:
         - Ingestion of data into the Knowledge Base
         - Deletion of all resources created
     """
-
     #done
     def __init__(self, region_name, collection_name, suffix=None):
         """
@@ -50,7 +49,7 @@ class KnowledgeBasesForAmazonBedrock:
         if suffix is not None:
             self.suffix = suffix
         else:
-            self.suffix = str(uuid.uuid4())[:8]
+            self.suffix = str(uuid.uuid4())[:5]
 
         self.identity = boto3.client("sts", region_name=self.region_name).get_caller_identity()["Arn"]
 
@@ -127,14 +126,13 @@ class KnowledgeBasesForAmazonBedrock:
                 )
             # self.embedding_model = embedding_model
 
-            encryption_policy_name = f"{kb_name}-sp-{self.suffix}"
             network_policy_name = f"{kb_name}-np-{self.suffix}"
             access_policy_name = f"{kb_name}-ap-{self.suffix}"
 
-            kb_execution_role_name = f"AmazonBedrockExecutionRoleForKnowledgeBase_{kb_name}_{self.suffix}"
-            fm_policy_name = f"AmazonBedrockFoundationModelPolicyForKnowledgeBase_{kb_name}_{self.suffix}"
-            s3_policy_name = f"AmazonBedrockS3PolicyForKnowledgeBase_{kb_name}_{self.suffix}"
-            oss_policy_name = f"AmazonBedrockOSSPolicyForKnowledgeBase_{kb_name}_{self.suffix}"
+            kb_execution_role_name = f"BedrockExecutionRoleForKB_{kb_name}_{self.suffix}"
+            fm_policy_name = f"BedrockFoundationModelPolicyForKB_{kb_name}_{self.suffix}"
+            s3_policy_name = f"BedrockS3PolicyForKB_{kb_name}_{self.suffix}"
+            oss_policy_name = f"BedrockOSSPolicyForKB_{kb_name}_{self.suffix}"
 
             collection_name  = self.collection_name
             index_name = f"{kb_name}-index"  #vector index name. 1:1 mapping. Each Knowledge Base has its own vector index.
@@ -165,9 +163,8 @@ class KnowledgeBasesForAmazonBedrock:
                 "========================================================================================"
             )
             print("Step 3 - Creating OSS encryption, network and data access policies")
-            encryption_policy, network_policy, access_policy = (
+            network_policy, access_policy = (
                 self.create_policies_in_oss(
-                    encryption_policy_name,
                     collection_name,
                     network_policy_name,
                     bedrock_kb_execution_role,
@@ -241,7 +238,6 @@ class KnowledgeBasesForAmazonBedrock:
                     Bucket=bucket_name,
                     CreateBucketConfiguration={"LocationConstraint": self.region_name},
                 )
-
 
     #done
     def get_data_bucket_name(self):
@@ -447,46 +443,23 @@ class KnowledgeBasesForAmazonBedrock:
     #done
     def create_policies_in_oss(
         self,
-        encryption_policy_name: str,
         collection_name: str,
         network_policy_name: str,
         bedrock_kb_execution_role: str,
         access_policy_name: str,
     ):
         """
-        Create OpenSearch Serverless encryption, network and data access policies.
+        Create OpenSearch Serverless network and data access policies.
         If policies already exist, retrieve them
         Args:
-            encryption_policy_name: name of the data encryption policy
             collection_name: name of the vector store
             network_policy_name: name of the network policy
             bedrock_kb_execution_role: name of the knowledge base execution role
             access_policy_name: name of the data access policy
 
         Returns:
-            encryption_policy, network_policy, access_policy
+            network_policy, access_policy
         """
-        try:
-            encryption_policy = self.aoss_client.create_security_policy(
-                name=encryption_policy_name,
-                policy=json.dumps(
-                    {
-                        "Rules": [
-                            {
-                                "Resource": ["collection/" + collection_name],
-                                "ResourceType": "collection",
-                            }
-                        ],
-                        "AWSOwnedKey": True,
-                    }
-                ),
-                type="encryption",
-            )
-        except self.aoss_client.exceptions.ConflictException:
-            print(f"{encryption_policy_name} already exists, retrieving it!")
-            encryption_policy = self.aoss_client.get_security_policy(
-                name=encryption_policy_name, type="encryption"
-            )
 
         try:
             network_policy = self.aoss_client.create_security_policy(
@@ -512,6 +485,7 @@ class KnowledgeBasesForAmazonBedrock:
                 name=network_policy_name, type="network"
             )
 
+        #Ref: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html#serverless-operations
         try:
             access_policy = self.aoss_client.create_access_policy(
                 name=access_policy_name,
@@ -557,7 +531,7 @@ class KnowledgeBasesForAmazonBedrock:
             access_policy = self.aoss_client.get_access_policy(
                 name=access_policy_name, type="data"
             )
-        return encryption_policy, network_policy, access_policy
+        return network_policy, access_policy
 
     #done
     def configure_opensearch(
@@ -587,7 +561,11 @@ class KnowledgeBasesForAmazonBedrock:
         collection_arn = collection["arn"]
 
         # Get the OpenSearch serverless collection URL
-        host = collection_id + "." + self.region_name + ".aoss.amazonaws.com"
+        #host = collection_id + "." + self.region_name + ".aoss.amazonaws.com"
+        collection_endpoint = collection["collectionEndpoint"]
+
+        host = collection_endpoint.replace("https://", "")
+
         print(host)
 
         # create opensearch serverless access policy and attach it to Bedrock execution role
@@ -626,15 +604,38 @@ class KnowledgeBasesForAmazonBedrock:
                         "dimension": 1024,
                         "method": {
                             "name": "hnsw",
-                            "engine": "faiss",
-                            "space_type": "cosinesimil",
+                            "space_type": "cosinesimil"
                         },
                     },
                     "text": {"type": "text"},
-                    "text-metadata": {"type": "text"},
+                    "text-metadata": {"type": "text"}
                 }
             },
         }
+
+        # body_json = {
+        #     "settings": {
+        #         "index.knn": "true",
+        #         "number_of_shards": 1,
+        #         "knn.algo_param.ef_search": 512,
+        #         "number_of_replicas": 0,
+        #     },
+        #     "mappings": {
+        #         "properties": {
+        #             "vector": {
+        #                 "type": "knn_vector",
+        #                 "dimension": 1024,
+        #                 "method": {
+        #                     "name": "hnsw",
+        #                     "engine": "faiss",
+        #                     "space_type": "cosinesimil",
+        #                 },
+        #             },
+        #             "text": {"type": "text"},
+        #             "text-metadata": {"type": "text"},
+        #         }
+        #     },
+        # }
 
         # Create index
         try:
@@ -653,6 +654,11 @@ class KnowledgeBasesForAmazonBedrock:
                 f"Error while trying to create the index, with error {e.error}\nyou may unmark the delete above to "
                 f"delete, and recreate the index"
             )
+            print("ERROR:", e)
+            print("ERROR TYPE:", e.error)
+            print("ERROR INFO:")
+            pp.pprint(e.info)
+
 
     #done
     @retry(wait_random_min=1000, wait_random_max=2000, stop_max_attempt_number=7)
@@ -779,7 +785,6 @@ class KnowledgeBasesForAmazonBedrock:
         return kb, ds
 
 
-    #done. not being used
     def get_kb(self, kb_id):
         """
         Get KB details
@@ -791,7 +796,6 @@ class KnowledgeBasesForAmazonBedrock:
         )
         return get_job_response
 
-    #done
     def upload_directory(self, s3_path, bucket_name):
         """
         Upload files from a local path to s3
@@ -804,7 +808,6 @@ class KnowledgeBasesForAmazonBedrock:
                 print(f"uploading file {file_to_upload} to {bucket_name}")
                 self.s3_client.upload_file(file_to_upload, bucket_name, file)
 
-    #done
     def synchronize_data(self, kb_id, ds_id):
         """
         Start an ingestion job to synchronize data from an S3 bucket to the Knowledge Base
@@ -839,7 +842,6 @@ class KnowledgeBasesForAmazonBedrock:
 
 
 
-	#done
     def delete_kb(
         self,
         kb_name: str,
@@ -873,14 +875,6 @@ class KnowledgeBasesForAmazonBedrock:
         index_name = kb_details["knowledgeBase"]["storageConfiguration"][
             "opensearchServerlessConfiguration"
         ]["vectorIndexName"]
-
-        encryption_policies = self.aoss_client.list_security_policies(
-            maxResults=100, type="encryption"
-        )
-        encryption_policy_name = None
-        for ep in encryption_policies["securityPolicySummaries"]:
-            if ep["name"].startswith(kb_name):
-                encryption_policy_name = ep["name"]
 
         network_policies = self.aoss_client.list_security_policies(
             maxResults=100, type="network"
@@ -933,35 +927,24 @@ class KnowledgeBasesForAmazonBedrock:
                 print("OpenSource Serveless Index deleted successfully!")
             except Exception as e:
                 print(e)
-            try:
-                self.aoss_client.delete_collection(id=collection_id)
-                print("OpenSource Collection Index deleted successfully!")
-            except Exception as e:
-                print(e)
 
-            try:
-                self.aoss_client.delete_access_policy(
-                    type="data", name=access_policy_name
-                )
-                print("OpenSource Serveless access policy deleted successfully!")
-            except Exception as e:
-                print(e)
+            if access_policy_name is not None:
+                try:
+                    self.aoss_client.delete_access_policy(
+                        type="data", name=access_policy_name
+                    )
+                    print("OpenSource Serveless access policy deleted successfully!")
+                except Exception as e:
+                    print(e)
 
-            try:
-                self.aoss_client.delete_security_policy(
-                    type="network", name=network_policy_name
-                )
-                print("OpenSource Serveless network policy deleted successfully!")
-            except Exception as e:
-                print(e)
-
-            try:
-                self.aoss_client.delete_security_policy(
-                    type="encryption", name=encryption_policy_name
-                )
-                print("OpenSource Serveless encryption policy deleted successfully!")
-            except Exception as e:
-                print(e)
+            if network_policy_name is not None:
+                try:
+                    self.aoss_client.delete_security_policy(
+                        type="network", name=network_policy_name
+                    )
+                    print("OpenSource Serveless network policy deleted successfully!")
+                except Exception as e:
+                    print(e)
 
         if delete_s3_bucket:
             try:
@@ -979,7 +962,6 @@ class KnowledgeBasesForAmazonBedrock:
 
         print("Resources deleted successfully!")
 
-	#done
     def delete_iam_roles_and_policies(self, kb_execution_role_name: str):
         """
         Delete IAM Roles and policies used by the Knowledge Base
@@ -1002,7 +984,6 @@ class KnowledgeBasesForAmazonBedrock:
 
         return 0
 
-	#done
     def delete_s3(self, bucket_name: str):
         """
         Delete the objects contained in the Knowledge Base S3 bucket.
@@ -1013,7 +994,7 @@ class KnowledgeBasesForAmazonBedrock:
         """
         objects = self.s3_client.list_objects(Bucket=bucket_name)
 
-		#first empty s3 bucket
+        #first empty s3 bucket
         if "Contents" in objects:
             for obj in objects["Contents"]:
                 self.s3_client.delete_object(Bucket=bucket_name, Key=obj["Key"])

@@ -4,7 +4,8 @@ from utils import interactive_sleep
 
 pp = pprint.PrettyPrinter(indent=2)
 
-# Create Collection Group and Collection in OpenSearch Serverless
+# This file creates Collection Group and Collection in OpenSearch Serverless NextGen
+
 def create_collection_group_and_collection(region_name, aoss_client, collection_group_name, collection_name):
 
 	# 1) Create OpenSearch CollectionGroup

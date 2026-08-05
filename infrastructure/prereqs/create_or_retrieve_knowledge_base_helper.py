@@ -7,7 +7,6 @@ from knowledge_base_for_bedrock import KnowledgeBasesForAmazonBedrock
 
 pp = pprint.PrettyPrinter(indent=2)
 
-
 def verify_collection_name_exists(region_name, collection_name):
     boto3_session = boto3.Session(region_name=region_name)
 
@@ -19,20 +18,8 @@ def verify_collection_name_exists(region_name, collection_name):
             f"OpenSearch collection '{collection_name}' does not exist."
         )
 
-
-if __name__ == "__main__":
-
-    region_name="us-east-2"
-
-    collection_group_name = "restaurant-collection-group"  #Needed for OpenSearch Serverless NextGen
-    collection_name = "restaurant-collection"
-
-    #Knowledge Base Name and Description
-    knowledge_base_name = "restaurant-assistant-kb"
-    knowledge_base_description = "Knowledge Base for Restaurant Assistant Application"
-
-    #Knowledge Base will be created for these Files (Vector Embeddings Will be stored in OpenSearch Serverless Vector Index)
-    kb_files_path = "kb_files"
+def create_or_retrieve_knowledge_base(region_name, collection_group_name, collection_name, knowledge_base_name, knowledge_base_description,
+                                      kb_files_path, run_upload_directory = True):
 
     verify_collection_name_exists(region_name, collection_name)
 
@@ -47,7 +34,8 @@ if __name__ == "__main__":
     print(f"Data Source ID: {ds_id}")
 
     #copy all docx files from kb_files to S3 bucket from
-    kb.upload_directory(f"{current_dir}/{kb_files_path}", kb.get_data_bucket_name())
+    if run_upload_directory:
+        kb.upload_directory(f"{current_dir}/{kb_files_path}", kb.get_data_bucket_name())
 
     # start_ingestion_job (create vector embeddings)
     kb.synchronize_data(kb_id, ds_id)
@@ -60,4 +48,10 @@ if __name__ == "__main__":
         Type="String",
         Overwrite=True,
     )
+
+
+
+
+
+
 
