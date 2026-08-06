@@ -28,6 +28,34 @@ cd infrastructure
 python prereqs/step_1_create_opensearch_collection.py  (Create Encryption Policy, Collection Group and Collection)
 python prereqs/step_2-create_knowledge_base_restaurant-assistant-kb.py
 
+
+============================================Scripts=============================================
+
+restaurant-assistant-kb
+restaurant-policies-kb
+
+cd infrastructure
+python prereqs/step_1_create_opensearch_collection.py
+python prereqs/step_2-create_knowledge_base_restaurant-assistant-kb.py
+python prereqs/step_2-create_knowledge_base_restaurant-policies-kb.py
+
+if needed after adding/updating/deleting docs in kb_files
+python prereqs/step_22_start_ingestion_job.py
+
+python prereqs/step_33_delete_knowledge_base_restaurant-assistant-kb.py
+python prereqs/step_44_delete_knowledge_base_restaurant-policies-kb.py
+python prereqs/step_55_delete_opensearch_collection.py
+
+
+Test Queries against KnowledgeBases (cross check with raw docs in kb_files)
+	restaurant-assistant-kb
+	What restaurants are in San Francisco?
+	Does Rice & Spice restaurant have Korean Fried Chicken with gochujang? If so, how much does it cost?
+	Is Tip 6 automatically added for large groups?  (No Info in KB)
+
+	restaurant-policies-kb
+	Is Tip 6 automatically added for large groups?
+
 ============================================Assets Created===========================================
 
 Assets created when you execute below for the first time:

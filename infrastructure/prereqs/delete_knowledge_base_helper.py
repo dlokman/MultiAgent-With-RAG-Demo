@@ -26,6 +26,7 @@ def verify_knowledge_base_exists(region_name, knowledge_base_name):
         )
 
 def delete_knowledge_base(region_name, collection_group_name, collection_name, knowledge_base_name, knowledge_base_description):
+
     verify_knowledge_base_exists(region_name, knowledge_base_name)
 
     kb = KnowledgeBasesForAmazonBedrock(region_name=region_name, collection_name=collection_name)

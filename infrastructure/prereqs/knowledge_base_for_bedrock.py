@@ -71,6 +71,7 @@ class KnowledgeBasesForAmazonBedrock:
         kb_description: str = None,
         data_bucket_name: str = None,
         embedding_model: str = "cohere.embed-english-v3",
+        rerank_model: str = "cohere.rerank-v3-5:0"
     ):
         """
         Function used to create a new Knowledge Base or retrieve an existent one
@@ -80,6 +81,7 @@ class KnowledgeBasesForAmazonBedrock:
             kb_description: Knowledge Base Description
             data_bucket_name: Name of s3 Bucket containing Knowledge Base Data
             embedding_model: Name of Embedding model to be used on Knowledge Base creation
+            rerank_model: Name of Rerank model to be used on Knowledge Base
 
         Returns:
             kb_id: str - Knowledge base id
@@ -125,11 +127,11 @@ class KnowledgeBasesForAmazonBedrock:
                     f"Invalid embedding model. Your embedding model should be one of {valid_embeddings_str}"
                 )
             # self.embedding_model = embedding_model
-
-            network_policy_name = f"{kb_name}-np-{self.suffix}"
+            #
             access_policy_name = f"{kb_name}-ap-{self.suffix}"
 
             kb_execution_role_name = f"BedrockExecutionRoleForKB_{kb_name}_{self.suffix}"
+            rerank_policy_name = f"BedrockRerankPolicyForKB_{kb_name}_{self.suffix}"
             fm_policy_name = f"BedrockFoundationModelPolicyForKB_{kb_name}_{self.suffix}"
             s3_policy_name = f"BedrockS3PolicyForKB_{kb_name}_{self.suffix}"
             oss_policy_name = f"BedrockOSSPolicyForKB_{kb_name}_{self.suffix}"
@@ -153,20 +155,21 @@ class KnowledgeBasesForAmazonBedrock:
             )
             bedrock_kb_execution_role = self.create_bedrock_kb_execution_role(
                 embedding_model,
+                rerank_model,
                 data_bucket_name,
+                rerank_policy_name,
                 fm_policy_name,
                 s3_policy_name,
-                kb_execution_role_name,
+                kb_execution_role_name
             )
 
             print(
                 "========================================================================================"
             )
-            print("Step 3 - Creating OSS encryption, network and data access policies")
-            network_policy, access_policy = (
+            print("Step 3 - Creating data access policies")
+            access_policy = (
                 self.create_policies_in_oss(
                     collection_name,
-                    network_policy_name,
                     bedrock_kb_execution_role,
                     access_policy_name,
                 )
@@ -194,7 +197,7 @@ class KnowledgeBasesForAmazonBedrock:
                 "========================================================================================"
             )
             print("Step 5 - Creating OSS Vector Index")
-            self.create_vector_index(index_name)
+            self.create_vector_index(collection_id, index_name)
 
             print(
                 "========================================================================================"
@@ -272,21 +275,26 @@ class KnowledgeBasesForAmazonBedrock:
             print(f"Error retrieving data source information: {str(e)}")
             return None
 
+
     #done
     def create_bedrock_kb_execution_role(
         self,
         embedding_model: str,
+        rerank_model: str,
         bucket_name: str,
+        rerank_policy_name: str,
         fm_policy_name: str,
         s3_policy_name: str,
-        kb_execution_role_name: str,
+        kb_execution_role_name: str
     ):
         """
         Create Knowledge Base Execution IAM Role and its required policies.
         If role and/or policies already exist, retrieve them
         Args:
             embedding_model: the embedding model used by the knowledge base
+            rerank_model: the rerank model used by the knowledge base
             bucket_name: the bucket name used by the knowledge base
+            rerank_policy_name: the name of the rerank model access policy
             fm_policy_name: the name of the foundation model access policy
             s3_policy_name: the name of the s3 access policy
             kb_execution_role_name: the name of the knowledge base execution role
@@ -294,6 +302,23 @@ class KnowledgeBasesForAmazonBedrock:
         Returns:
             IAM role created
         """
+
+        rerank_policy_document = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": ["bedrock:Rerank"],
+                    "Resource": "*"
+                },
+                {
+                    "Effect": "Allow",
+                    "Action": "bedrock:InvokeModel",
+                    "Resource": f"arn:aws:bedrock:{self.region_name}::foundation-model/{rerank_model}"
+                }
+            ],
+        }
+
         foundation_model_policy_document = {
             "Version": "2012-10-17",
             "Statement": [
@@ -340,6 +365,18 @@ class KnowledgeBasesForAmazonBedrock:
         }
 
         try:
+            rerank_policy = self.iam_client.create_policy(
+                PolicyName=rerank_policy_name,
+                PolicyDocument=json.dumps(rerank_policy_document),
+                Description="Policy for accessing rerank model",
+            )
+        except self.iam_client.exceptions.EntityAlreadyExistsException:
+            print(f"{rerank_policy_name} already exists, retrieving it!")
+            rerank_policy = self.iam_client.get_policy(
+                PolicyArn=f"arn:aws:iam::{self.account_number}:policy/{rerank_policy_name}"
+            )
+
+        try:
             # create policies based on the policy documents
             fm_policy = self.iam_client.create_policy(
                 PolicyName=fm_policy_name,
@@ -363,6 +400,7 @@ class KnowledgeBasesForAmazonBedrock:
             s3_policy = self.iam_client.get_policy(
                 PolicyArn=f"arn:aws:iam::{self.account_number}:policy/{s3_policy_name}"
             )
+
         # create bedrock execution role
         try:
             bedrock_kb_execution_role = self.iam_client.create_role(
@@ -377,10 +415,15 @@ class KnowledgeBasesForAmazonBedrock:
                 RoleName=kb_execution_role_name
             )
         # fetch arn of the policies and role created above
+        rerank_policy_arn = rerank_policy["Policy"]["Arn"]
         s3_policy_arn = s3_policy["Policy"]["Arn"]
         fm_policy_arn = fm_policy["Policy"]["Arn"]
 
         # attach policies to Amazon Bedrock execution role
+        self.iam_client.attach_role_policy(
+            RoleName=bedrock_kb_execution_role["Role"]["RoleName"],
+            PolicyArn=rerank_policy_arn,
+        )
         self.iam_client.attach_role_policy(
             RoleName=bedrock_kb_execution_role["Role"]["RoleName"],
             PolicyArn=fm_policy_arn,
@@ -444,7 +487,6 @@ class KnowledgeBasesForAmazonBedrock:
     def create_policies_in_oss(
         self,
         collection_name: str,
-        network_policy_name: str,
         bedrock_kb_execution_role: str,
         access_policy_name: str,
     ):
@@ -453,38 +495,12 @@ class KnowledgeBasesForAmazonBedrock:
         If policies already exist, retrieve them
         Args:
             collection_name: name of the vector store
-            network_policy_name: name of the network policy
             bedrock_kb_execution_role: name of the knowledge base execution role
             access_policy_name: name of the data access policy
 
         Returns:
-            network_policy, access_policy
+             access_policy
         """
-
-        try:
-            network_policy = self.aoss_client.create_security_policy(
-                name=network_policy_name,
-                policy=json.dumps(
-                    [
-                        {
-                            "Rules": [
-                                {
-                                    "Resource": ["collection/" + collection_name],
-                                    "ResourceType": "collection",
-                                }
-                            ],
-                            "AllowFromPublic": True,
-                        }
-                    ]
-                ),
-                type="network",
-            )
-        except self.aoss_client.exceptions.ConflictException:
-            print(f"{network_policy_name} already exists, retrieving it!")
-            network_policy = self.aoss_client.get_security_policy(
-                name=network_policy_name, type="network"
-            )
-
         #Ref: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-genref.html#serverless-operations
         try:
             access_policy = self.aoss_client.create_access_policy(
@@ -531,7 +547,7 @@ class KnowledgeBasesForAmazonBedrock:
             access_policy = self.aoss_client.get_access_policy(
                 name=access_policy_name, type="data"
             )
-        return network_policy, access_policy
+        return access_policy
 
     #done
     def configure_opensearch(
@@ -581,7 +597,7 @@ class KnowledgeBasesForAmazonBedrock:
             pp.pprint(e)
 
     #done
-    def create_vector_index(self, index_name: str):
+    def create_vector_index(self, collection_id: str, index_name: str):
         """
         Create OpenSearch Serverless vector index. If existent, ignore
         Args:
@@ -639,25 +655,36 @@ class KnowledgeBasesForAmazonBedrock:
 
         # Create index
         try:
-            response = self.oss_client.indices.create(
-                index=index_name, body=json.dumps(body_json)
-            )
+            response = self.aoss_client.create_index(id=collection_id, indexName=index_name, indexSchema=body_json)
+
             print("\nCreating index:")
             pp.pprint(response)
 
-            # index creation can take up to a minute
             interactive_sleep(60)
-        except RequestError as e:
-            # you can delete the index if its already exists
-            # oss_client.indices.delete(index=index_name)
-            print(
-                f"Error while trying to create the index, with error {e.error}\nyou may unmark the delete above to "
-                f"delete, and recreate the index"
-            )
-            print("ERROR:", e)
-            print("ERROR TYPE:", e.error)
-            print("ERROR INFO:")
-            pp.pprint(e.info)
+
+        except self.aoss_client.exceptions.ConflictException:
+            print(f"Index {index_name} already exists!")
+
+        # try:
+        #     response = self.oss_client.indices.create(
+        #         index=index_name, body=json.dumps(body_json)
+        #     )
+        #     print("\nCreating index:")
+        #     pp.pprint(response)
+
+        #     # index creation can take up to a minute
+        #     interactive_sleep(60)
+        # except RequestError as e:
+        #     # you can delete the index if its already exists
+        #     # oss_client.indices.delete(index=index_name)
+        #     print(
+        #         f"Error while trying to create the index, with error {e.error}\nyou may unmark the delete above to "
+        #         f"delete, and recreate the index"
+        #     )
+        #     print("ERROR:", e)
+        #     print("ERROR TYPE:", e.error)
+        #     print("ERROR INFO:")
+        #     pp.pprint(e.info)
 
 
     #done
@@ -762,7 +789,7 @@ class KnowledgeBasesForAmazonBedrock:
                 name=kb_name,
                 description=kb_description,
                 knowledgeBaseId=kb["knowledgeBaseId"],
-                dataDeletionPolicy="DELETE",    #  Delete Data when DataSource is Deleted
+                dataDeletionPolicy="RETAIN",
                 dataSourceConfiguration={
                     "type": "S3",
                     "s3Configuration": s3_configuration,
@@ -876,14 +903,6 @@ class KnowledgeBasesForAmazonBedrock:
             "opensearchServerlessConfiguration"
         ]["vectorIndexName"]
 
-        network_policies = self.aoss_client.list_security_policies(
-            maxResults=100, type="network"
-        )
-        network_policy_name = None
-        for np in network_policies["securityPolicySummaries"]:
-            if np["name"].startswith(kb_name):
-                network_policy_name = np["name"]
-
         data_policies = self.aoss_client.list_access_policies(
             maxResults=100, type="data"
         )
@@ -921,30 +940,28 @@ class KnowledgeBasesForAmazonBedrock:
         except Exception as e:
             print(e)
 
+        # if delete_opensearch:
+        #     try:
+        #         self.oss_client.indices.delete(index=index_name)
+        #         print("OpenSource Serveless Index deleted successfully!")
+        #     except Exception as e:
+        #         print(e)
+
         if delete_opensearch:
             try:
-                self.oss_client.indices.delete(index=index_name)
-                print("OpenSource Serveless Index deleted successfully!")
+                self.aoss_client.delete_index(id=collection_id, indexName=index_name)
+                print("OpenSearch Serverless Index deleted successfully!")
             except Exception as e:
                 print(e)
 
-            if access_policy_name is not None:
-                try:
-                    self.aoss_client.delete_access_policy(
-                        type="data", name=access_policy_name
-                    )
-                    print("OpenSource Serveless access policy deleted successfully!")
-                except Exception as e:
-                    print(e)
-
-            if network_policy_name is not None:
-                try:
-                    self.aoss_client.delete_security_policy(
-                        type="network", name=network_policy_name
-                    )
-                    print("OpenSource Serveless network policy deleted successfully!")
-                except Exception as e:
-                    print(e)
+        if access_policy_name is not None:
+            try:
+                self.aoss_client.delete_access_policy(
+                    type="data", name=access_policy_name
+                )
+                print("OpenSource Serveless access policy deleted successfully!")
+            except Exception as e:
+                print(e)
 
         if delete_s3_bucket:
             try:

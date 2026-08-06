@@ -10,7 +10,8 @@ if __name__ == "__main__":
 
     collection_group_name = "restaurant-collection-group"  #Needed for OpenSearch Serverless NextGen
     collection_name = "restaurant-collection"
-    encryption_policy_name = f"{collection_name}-sp"
+    encryption_policy_name = f"{collection_name}-sp" #sp=security policy
+    network_policy_name = f"{collection_name}-np" #np=network policy
 
     boto3_session = boto3.Session(region_name=region_name)
     aoss_client = boto3_session.client("opensearchserverless", region_name=region_name)
@@ -33,9 +34,36 @@ if __name__ == "__main__":
             type="encryption",
         )
     except aoss_client.exceptions.ConflictException:
-        print(f"{encryption_policy_name} already exists, retrieving it!")
+        print(f"{encryption_policy_name} already exists!")
 
-	# Create Collection Group and Collection in OpenSearch Serverless NextGen
+
+
+    # Create Network Policy for OpenSearch Serverless Collection
+    # Allow only private access from Amazon Bedrock to the OpenSearch Serverless collection
+
+    try:
+        network_policy = aoss_client.create_security_policy(
+            name=network_policy_name,
+            type="network",
+            policy=json.dumps(
+                [
+                    {
+                        "Rules": [
+                            {
+                                "ResourceType": "collection",
+                                "Resource": [f"collection/{collection_name}"],
+                            }
+                        ],
+                        "AllowFromPublic": True
+                    }
+                ]
+            ),
+        )
+    except aoss_client.exceptions.ConflictException:
+        print(f"{network_policy_name} already exists!")
+
+
+    # Create Collection Group and Collection in OpenSearch Serverless NextGen
     (
         host,
         collection_group,
