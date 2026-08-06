@@ -56,6 +56,12 @@ Test Queries against KnowledgeBases (cross check with raw docs in kb_files)
 	restaurant-policies-kb
 	Is Tip 6 automatically added for large groups?
 
+cd infrastructure
+Create dynamoDB Table
+python prereqs/dynamodb-restaurant-assistant-create.py
+
+Delete dynamoDB Table
+python prereqs/dynamodb-restaurant-assistant-delete.py
 ============================================Assets Created===========================================
 
 ============================================Assets Created===========================================
@@ -95,6 +101,13 @@ kb_execution_role_name = f"BedrockExecutionRoleForKB_restaurant-assistant-kb_{se
 ***Notes***
 NextGen vector search collections do not require the engine and mode parameters in index mappings.
 https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-vector-search.html?utm_source=chatgpt.com
+
+Embedding Model Used: cohere.embed-english-v3
+space_type: "cosinesimil"
+
+	Alternative
+	Embedding Model: amazon.titan-embed-text-v2:0
+	space_type: "l2"
 
 
 ***Future Improvements***

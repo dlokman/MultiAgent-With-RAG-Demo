@@ -22,11 +22,11 @@ class AmazonDynamoDB:
         - Deletion of the table and its parameter
     """
 
-    def __init__(self):
+    def __init__(self, region_name):
         """
         Class initializer
         """
-        self._boto_session = Session()
+        self._boto_session = Session(region_name=region_name)
         self._region = self._boto_session.region_name
         self._dynamodb_client = boto3.client("dynamodb", region_name=self._region)
         self._dynamodb_resource = boto3.resource("dynamodb", region_name=self._region)
@@ -49,8 +49,8 @@ class AmazonDynamoDB:
             table = self._dynamodb_resource.create_table(
                 TableName=table_name,
                 KeySchema=[
-                    {"AttributeName": pk_item, "KeyType": "HASH"},
-                    {"AttributeName": sk_item, "KeyType": "RANGE"},
+                    {"AttributeName": pk_item, "KeyType": "HASH"},  # partition key
+                    {"AttributeName": sk_item, "KeyType": "RANGE"}, # sort key
                 ],
                 AttributeDefinitions=[
                     {"AttributeName": pk_item, "AttributeType": "S"},
@@ -91,39 +91,10 @@ class AmazonDynamoDB:
             self._dynamodb_client.delete_table(TableName=table_name)
             print(f"Table {table_name} is being deleted...")
             waiter = self._dynamodb_client.get_waiter("table_not_exists")
-            waiter.wait(TableName=table_name)
+            waiter.wait(TableName=table_name)  # will wait for the table to be deleted
             print(f"Table {table_name} has been deleted.")
             self._smm_client.delete_parameter(Name=f"{kb_name}-table-name")
 
         except Exception as e:
             print(f"Error deleting table {table_name}: {e}")
 
-
-if __name__ == "__main__":
-    dynamodb = AmazonDynamoDB()
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-
-    # Example usage:
-    config_path = f"{current_dir}/prereqs_config.yaml"
-    data = read_yaml_file(config_path)
-
-    parser = argparse.ArgumentParser(description="DynamoDB handler")
-    parser.add_argument(
-        "--mode",
-        required=True,
-        help="DynamoDB helper model. One for: create or delete.",
-    )
-
-    args = parser.parse_args()
-
-    print(data)
-    if args.mode == "create":
-        dynamodb.create_dynamodb(
-            data["knowledge_base_name"],
-            data["table_name"],
-            data["pk_item"],
-            data["sk_item"],
-        )
-        print(f"Table Name: {data['table_name']}")
-    if args.mode == "delete":
-        dynamodb.delete_dynamodb_table(data["knowledge_base_name"], data["table_name"])
