@@ -58,12 +58,15 @@ Test Queries against KnowledgeBases (cross check with raw docs in kb_files)
 
 ============================================Assets Created===========================================
 
+============================================Assets Created===========================================
+
 Assets created when you execute below for the first time:
 step_1_create_opensearch_collection.py
 step_2-create_knowledge_base_restaurant-assistant-kb.py
 
 
-encryption_policy_name = f"restaurant-assistant-kb-sp-{self.suffix}"   <=== created
+encryption_policy_name = {collection_name}-sp   <=== created
+network_policy_name = {collection_name}-np
 collection group  = "restaurant-collection-group"
 collection = "restaurant-collection" (collection can have multiple indexes)
 
@@ -72,19 +75,17 @@ SSM Parameter Store: restaurant-assistant-kb-id
 
 
 knowledge_base_name = "restaurant-assistant-kb"
-
 vector index name = f"restaurant-assistant-kb-index"
 
 opensearchclient (created via opensearch client so it applies to opensearch. we dont attach this to any Role)
-  network_policy_name = f"restaurant-assistant-kb-np-{self.suffix}"
   access_policy_name = f"restaurant-assistant-kb-ap-{self.suffix}"  ==> kb & identity executing can perform opensearch collection operations
 
 These 3 policies are attached to Knowledge Base Execution Role
-kb_execution_role_name = f"AmazonBedrockExecutionRoleForKnowledgeBase_restaurant-assistant-kb_{self.suffix}"
-  fm_policy_name = f"AmazonBedrockFoundationModelPolicyForKnowledgeBase_restaurant-assistant-kb_{self.suffix}"
-  s3_policy_name = f"AmazonBedrockS3PolicyForKnowledgeBase_restaurant-assistant-kb_{self.suffix}"
-  oss_policy_name = f"AmazonBedrockOSSPolicyForKnowledgeBase_restaurant-assistant-kb_{self.suffix}" ==> kb can access the collection's OpenSearch APIs
-
+kb_execution_role_name = f"BedrockExecutionRoleForKB_restaurant-assistant-kb_{self.suffix}"
+   rerank_policy_name = f"BedrockRerankPolicyForKB_restaurant-assistant-kb_{self.suffix}"
+   fm_policy_name = f"BedrockFoundationModelPolicyForKB_restaurant-assistant-kb_{self.suffix}"
+   s3_policy_name = f"BedrockS3PolicyForKB__restaurant-assistant-kb_{self.suffix}"
+   oss_policy_name = f"BedrockOSSPolicyForKB_restaurant-assistant-kb_{self.suffix}"  ==> kb can access the collection's OpenSearch APIs
     AOSS Data Access Policy
     aoss:ReadDocument
     aoss:WriteDocument
