@@ -4,7 +4,7 @@ from strands import Agent, tool
 import asyncio
 from strands.agent.conversation_manager.null_conversation_manager import NullConversationManager
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
-from model.load import load_model
+from model.model import load_model
 from mcp_client.client import get_streamable_http_mcp_client
 
 app = BedrockAgentCoreApp()

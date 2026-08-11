@@ -1,73 +1,39 @@
 from strands import Agent, tool
+from model.model import load_model
+from mcp_client.client import get_streamable_http_mcp_client
+from orchestrator_agent import orchestrator
+
+import logging
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 
-from model.load import load_model
-from mcp_client.client import get_streamable_http_mcp_client
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s - %(message)s"
+)
+
+log = logging.getLogger(__name__)
 
 app = BedrockAgentCoreApp()
-log = app.logger
 
-# Define a Streamable HTTP MCP Client
-mcp_clients = [get_streamable_http_mcp_client()]
+_orchestrator_agent = None
 
- ### <=============== TODOOOOOOOOOOOOOOOOOOOOOO
-DEFAULT_SYSTEM_PROMPT = """
-You are a helpful assistant. Use tools when appropriate.
-"""
-
-
-# Define a collection of tools used by the model
-tools = [] # TODOOOOO Add Agent as Tools here
-
-
-#TODOOOOO Remove
-# Define a simple function tool
-@tool
-def add_numbers(a: int, b: int) -> int:
-    """Return the sum of two numbers"""
-    return a+b
-
-tools.append(add_numbers)
-
-
-# Add MCP client to tools if available
-for mcp_client in mcp_clients:
-    if mcp_client:
-        tools.append(mcp_client)
-
-
-_agent = None
-
-def get_agent():
+def get_orchestrator_agent():
     """
-    Create one Strands Agent for this AgentCore Runtime session's
-    microVM and reuse it for subsequent invocations.
+    Create one Strands Orchestrator Agent for this AgentCore Runtime session's microVM and reuse it for subsequent invocations.
 
-    AgentCore provides a dedicated microVM per runtimeSessionId,
-    so different AgentCore sessions have isolated Agent instances.
+    AgentCore provides a dedicated microVM per runtimeSessionId, so different AgentCore sessions have isolated Agent instances.
     """
-    global _agent
+    global _orchestrator_agent
 
-    if _agent is None:
-        _agent = Agent(
-            model=load_model(),
-            system_prompt=DEFAULT_SYSTEM_PROMPT,
-            tools=tools
-        )
+    if _orchestrator_agent is None:
+        _orchestrator_agent = orchestrator
 
-    return _agent
+    return _orchestrator_agent
 
 
 @app.entrypoint
 async def invoke(payload, context):
     log.info("Invoking Agent.....")
-
-    session_id = context.session_id
-
-    print(f"sessionid: {session_id}")
-
-    if not session_id:
-        raise ValueError("session_id is required. Pass --session-id when invoking.")
 
     # Validate chatbot input
     prompt = payload.get("prompt")
@@ -76,11 +42,11 @@ async def invoke(payload, context):
         raise ValueError("prompt must be a non-empty string")
 
     # Reuse the Agent within this AgentCore session's microVM
-    agent = get_agent()
+    orchestrator_agent = get_orchestrator_agent()
 
 
   # Stream Strands events back through AgentCore
-    async for event in agent.stream_async(prompt):
+    async for event in orchestrator_agent.stream_async(prompt):
 
         if not isinstance(event, dict) or "event" not in event:
             continue
