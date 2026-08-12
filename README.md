@@ -99,6 +99,23 @@ kb_execution_role_name = f"BedrockExecutionRoleForKB_restaurant-assistant-kb_{se
 
 ============================================================================================================
 ***Notes***
+
+Using Claude Sonnet 4.6. Can also upgrade to Claude Sonnet 5 OR use Clade Opus 4.8
+
+Using Scale-to-zero capability for cost optimization (OpenSearch NExtGen)
+1st request will have a cold start of 10 seconds (to allow for the OCU to scale from zero)
+After 10 minutes of inactivity, OCUs scale down to zero.
+
+capacityLimits={
+	"minIndexingCapacityInOCU": 0,
+	"maxIndexingCapacityInOCU": 8,
+	"minSearchCapacityInOCU": 0,    <=== $0 Idle Cost. Set to 1 to avoid cold start
+	"maxSearchCapacityInOCU": 8
+}
+
+https://aws.amazon.com/blogs/aws/introducing-the-next-generation-of-amazon-opensearch-serverless-for-building-your-agentic-ai-applications/
+
+
 NextGen vector search collections do not require the engine and mode parameters in index mappings.
 https://docs.aws.amazon.com/opensearch-service/latest/developerguide/serverless-vector-search.html?utm_source=chatgpt.com
 
@@ -111,6 +128,9 @@ space_type: "cosinesimil"
 
 
 ***Future Improvements***
+
+Add Guardrails to RetrieveAndGenerate (guardrailId, guardrailVersion)
+
 
 Right now Using Default Parser (Haven't configure it)
 

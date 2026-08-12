@@ -42,18 +42,20 @@ def restaurant_policies_kb_retrieve(query: str) -> str:
 						'modelArn': get_model_arn(),
 						'retrievalConfiguration': {
 							'vectorSearchConfiguration': {
-								'numberOfResults': 5,
-								"overrideSearchType": "HYBRID"
-								}
-							},
-							'rerankingConfiguration': {
-									'type': 'BEDROCK_RERANKING_MODEL',
-									'bedrockRerankingConfiguration': {
-										'modelArn': get_rerank_model_arn(),
-										'numberOfRerankedResults': 3
+								'numberOfResults': 7,
+								"overrideSearchType": "HYBRID",
+                                "rerankingConfiguration": {
+									"type": "BEDROCK_RERANKING_MODEL",
+									"bedrockRerankingConfiguration": {
+										"modelConfiguration": {
+											"modelArn": get_rerank_model_arn()
+										},
+										"numberOfRerankedResults": 3
 									}
 								}
-						}
+							 }
+						  }
+					}
 				}
     		}
 
@@ -66,6 +68,8 @@ def restaurant_policies_kb_retrieve(query: str) -> str:
 
 
 policies_agent = Agent(
+    name="policies_agent",
+    description="An agent that specializes in answering questions about restaurant policies.",
     model=load_model(),
     system_prompt= """
 		You are the Policies Agent, a specialized agent responsible for restaurant policy information.

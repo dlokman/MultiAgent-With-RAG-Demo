@@ -11,6 +11,7 @@ from strands.models import BedrockModel
 from utils import utils
 import uuid
 import logging
+from strands_tools import current_time
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ def restaurant_assistant_kb_retrieve(query: str) -> str:
     if not RESTAURANT_ASSISTANT_KNOWLEDGE_BASE_ID:
         log.error("RESTAURANT_ASSISTANT_KNOWLEDGE_BASE_ID is not set up. Please check the configuration.")
         return "RESTAURANT_ASSISTANT_KNOWLEDGE_BASE_ID is not set up. Please check the configuration."
-
+	# https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agent-runtime/client/retrieve_and_generate.html
     params = {
 				"input": {"text": query},
 				"retrieveAndGenerateConfiguration": {
@@ -48,20 +49,23 @@ def restaurant_assistant_kb_retrieve(query: str) -> str:
 						'modelArn': get_model_arn(),
 						'retrievalConfiguration': {
 							'vectorSearchConfiguration': {
-								'numberOfResults': 5,
-								"overrideSearchType": "HYBRID"
-								}
-							},
-							'rerankingConfiguration': {
-									'type': 'BEDROCK_RERANKING_MODEL',
-									'bedrockRerankingConfiguration': {
-										'modelArn': get_rerank_model_arn(),
-										'numberOfRerankedResults': 3
+								'numberOfResults': 7,
+								"overrideSearchType": "HYBRID",
+                                "rerankingConfiguration": {
+									"type": "BEDROCK_RERANKING_MODEL",
+									"bedrockRerankingConfiguration": {
+										"modelConfiguration": {
+											"modelArn": get_rerank_model_arn()
+										},
+										"numberOfRerankedResults": 3
 									}
 								}
-						}
+							 }
+						  }
+					}
 				}
     		}
+
 
     try:
         response = bedrock_runtime.retrieve_and_generate(**params)
@@ -146,14 +150,39 @@ def delete_booking(booking_id: str, restaurant_name: str) -> str:
         log.error(f"Failed to delete booking with ID {booking_id}: {type(e).__name__}: {str(e)}", exc_info=True)
         return f"Failed to delete booking with ID {booking_id}"
 
+@tool
+def list_all_bookings() -> dict:
+    """Get all restaurant bookings.
 
+    Returns:
+        A dictionary containing all restaurant bookings or an error message.
+    """
+    try:
+        response = db_table.scan()
+        bookings = response.get("Items", [])
+
+        # Continue scanning if DynamoDB returns paginated results
+        while "LastEvaluatedKey" in response:
+            response = db_table.scan(
+                ExclusiveStartKey=response["LastEvaluatedKey"]
+            )
+            bookings.extend(response.get("Items", []))
+
+        return {
+            "bookings": bookings
+        }
+
+    except Exception as e:
+        log.error(f"Failed to list all bookings: {type(e).__name__}: {str(e)}", exc_info=True)
+        return {"Failed to list all bookings"}
 
 restaurant_assistant_agent = Agent(
+    name="restaurant_assistant_agent",
+	description="An agent that specializes in restaurant information, menus, pricing, and restaurant booking management.",
     model=load_model(),
-
     system_prompt="""
 		You are the Restaurant Agent, a specialized agent responsible for restaurant information, menus, and booking management.
-        You have tools to create, retrieve, delete reservations and get restaurant information
+        You have tools to create, retrieve, delete and list bookings and get restaurant information
 
 		## Instructions
 		- Answer questions about restaurant names, addresses, phone numbers, menus, menu items, and prices using the restaurant assistant knowledge base retrieval tool
@@ -172,5 +201,5 @@ restaurant_assistant_agent = Agent(
 		- Clearly indicate when a tool fails or the requested information cannot be found.
 		- Do not add introductions, greetings, or unnecessary conversational language.
 		""",
-    tools=[restaurant_assistant_kb_retrieve, create_booking, get_booking_details, delete_booking]
+    tools=[restaurant_assistant_kb_retrieve, create_booking, get_booking_details, delete_booking, list_all_bookings]
 )
