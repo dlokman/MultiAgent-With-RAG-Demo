@@ -1,3 +1,17 @@
 {
-  "targets": {}
+  "targets": {
+    "default": {
+      "resources": {
+        "runtimes": {
+          "restaurant_assistant": {
+            "runtimeId": "restaurantassistant_restaurant_assistant-0zuMLq5kJ2",
+            "runtimeArn": "arn:aws:bedrock-agentcore:us-east-1:742752463290:runtime/restaurantassistant_restaurant_assistant-0zuMLq5kJ2",
+            "roleArn": "arn:aws:iam::742752463290:role/AgentCore-restaurantassis-ApplicationAgentRestauran-Nmpr715x73h6"
+          }
+        },
+        "stackName": "AgentCore-restaurantassistant-default",
+        "deployHash": "c74a93548a424723"
+      }
+    }
+  }
 }

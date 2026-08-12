@@ -1,0 +1,61 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowBedrockRetrieve",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:Retrieve"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowDynamoDBCrud",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:DeleteItem",
+		"dynamodb:Scan"
+      ],
+      "Resource": "*"
+    },
+	{
+      "Sid": "AllowSSMGetParameter",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter"
+      ],
+      "Resource": [
+        "arn:aws:ssm:us-east-1:742752463290:parameter/restaurant-assistant-kb-id",
+		"arn:aws:ssm:us-east-1:742752463290:parameter/restaurant-policies-kb-id",
+		"arn:aws:ssm:us-east-1:742752463290:parameter/restaurant-assistant-kb-table-name"
+      ]
+    },
+	{
+		"Sid": "AllowBedrockModelInvocation",
+		"Effect": "Allow",
+		"Action": [
+			"bedrock:InvokeModel",
+			"bedrock:InvokeModelWithResponseStream",
+			"bedrock:GetInferenceProfile"
+		],
+		"Resource": [
+			"arn:aws:bedrock:us-east-1:742752463290:application-inference-profile/wtv4phtvp7i1"
+		]
+	},
+	{
+		"Effect": "Allow",
+		"Action": "bedrock:RetrieveAndGenerate",
+		"Resource": "*"
+	},
+	{
+		"Sid": "AllowBedrockRerank",
+		"Effect": "Allow",
+		"Action": [
+			"bedrock:Rerank"
+		],
+		"Resource": "*"
+	}
+  ]
+}

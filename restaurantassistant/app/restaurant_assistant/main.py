@@ -1,5 +1,4 @@
 from strands import Agent, tool
-from model.model import load_model
 from mcp_client.client import get_streamable_http_mcp_client
 from orchestrator_agent import orchestrator
 

@@ -70,7 +70,7 @@ def restaurant_assistant_kb_retrieve(query: str) -> str:
     try:
         response = bedrock_runtime.retrieve_and_generate(**params)
         return response.get("output", {}).get("text", "No relevant information found in the restaurant assistant Knowledge Base.")
-    except (KeyError, ValueError, ConnectionError) as e:
+    except Exception as e:
         log.error(f"Failed to retrieve information from restaurant assistant knowledge base: {type(e).__name__}: {str(e)}", exc_info=True)
         return f"Failed to retrieve information from restaurant assistant knowledge base:"
 
@@ -201,5 +201,5 @@ restaurant_assistant_agent = Agent(
 		- Clearly indicate when a tool fails or the requested information cannot be found.
 		- Do not add introductions, greetings, or unnecessary conversational language.
 		""",
-    tools=[restaurant_assistant_kb_retrieve, create_booking, get_booking_details, delete_booking, list_all_bookings]
+    tools=[restaurant_assistant_kb_retrieve, create_booking, get_booking_details, delete_booking, list_all_bookings, current_time]
 )
