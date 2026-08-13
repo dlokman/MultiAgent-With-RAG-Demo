@@ -3,19 +3,19 @@ import boto3
 import pprint
 import os
 from utils import interactive_sleep
-from knowledge_base_for_bedrock import KnowledgeBasesForAmazonBedrock
 from create_or_retrieve_knowledge_base_helper import create_or_retrieve_knowledge_base
 
 pp = pprint.PrettyPrinter(indent=2)
 
 # Local Dev Process
-# 0) Add a file to prereqs/kb_files/restaurant_assistant/ directory
+# 0) Add a file to prerequisites/kb_files/restaurant_assistant/ directory
+#     List: Demo-Project-1\infrastructure\prerequisites\kb_files
 # 1) From Git Bash sync kb_files/xxx/ to its related s3 bucket (add, update, delete)
-#    aws s3 sync prereqs/kb_files/xxx/ s3://my-bucket/ --delete
-#    aws s3 sync prereqs/kb_files/restaurant_assistant/ s3://restaurant-assistant-kb-f1a6e/ --delete
+#    aws s3 sync prerequisites/kb_files/xxx/ s3://my-bucket/ --delete
+#    aws s3 sync prerequisites/kb_files/restaurant_assistant/ s3://restaurant-assistant-kb-62d9f/ --delete
 # 2) Run this script to start the ingestion job for the knowledge base.
 #    This will create vector embeddings for the updated files in the s3 bucket and store it in opensearch collection index
-#    python prereqs/step_22_start_ingestion_job.py
+#    uv run prerequisites/step_22_start_ingestion_job.py
 if __name__ == "__main__":
 
     region_name="us-east-1"

@@ -109,7 +109,7 @@ def create_booking(date: str, hour: str, restaurant_name: str, guest_name: str, 
 
 @tool
 def get_booking_details(booking_id: str, restaurant_name: str) -> dict:
-    """Get the relevant details for booking_id in restaurant_name
+    """Get details for a restaurant Booking given a booking_id and restaurant_name
     Args:
         booking_id: the id of the reservation
         restaurant_name: name of the restaurant handling the reservation
@@ -131,7 +131,7 @@ def get_booking_details(booking_id: str, restaurant_name: str) -> dict:
 
 @tool
 def delete_booking(booking_id: str, restaurant_name: str) -> str:
-    """delete an existing booking_id at restaurant_name
+    """Delete an existing booking_id at restaurant_name
     Args:
         booking_id: the id of the reservation
         restaurant_name: name of the restaurant handling the reservation
@@ -152,7 +152,7 @@ def delete_booking(booking_id: str, restaurant_name: str) -> str:
 
 @tool
 def list_all_bookings() -> dict:
-    """Get all restaurant bookings.
+    """List all bookings across all restaurants in the system.
 
     Returns:
         A dictionary containing all restaurant bookings or an error message.
@@ -176,6 +176,7 @@ def list_all_bookings() -> dict:
         log.error(f"Failed to list all bookings: {type(e).__name__}: {str(e)}", exc_info=True)
         return {"Failed to list all bookings"}
 
+
 restaurant_assistant_agent = Agent(
     name="restaurant_assistant_agent",
 	description="An agent that specializes in restaurant information, menus, pricing, and restaurant booking management.",
@@ -187,8 +188,9 @@ restaurant_assistant_agent = Agent(
 		## Instructions
 		- Answer questions about restaurant names, addresses, phone numbers, menus, menu items, and prices using the restaurant assistant knowledge base retrieval tool
 		- Handle booking operations using the appropriate available booking tools.
+        - If date is not provided by user, ask for it before creating a booking. If the user request a booking with terms like create a booking for today, yesterday, tomorrow, next week etc then ask for a specific date when the booking is needed.
+          Do not assume or calculate what the date is. Once the user provides a specific date, format that date per tool description to create the booking.
 		- ALWAYS verify that the restaurant exists in the restaurant directory using the restaurant assistant knowledge base before creating a booking.
-		- Before performing a booking operation, make sure all required information is available.
 		- NEVER assume missing parameter values when calling a tool. If required information is missing, clearly indicate what information is needed.
 		- Only answer using information obtained using available tools. Do not use your own knowledge or invent restaurant, menu, pricing, or booking information.
 		- Never claim that a booking was created, retrieved, updated, or deleted unless the corresponding tool confirms the result.

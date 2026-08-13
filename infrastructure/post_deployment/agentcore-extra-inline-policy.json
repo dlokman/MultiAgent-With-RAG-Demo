@@ -41,7 +41,8 @@
 			"bedrock:GetInferenceProfile"
 		],
 		"Resource": [
-			"arn:aws:bedrock:us-east-1:742752463290:application-inference-profile/wtv4phtvp7i1"
+			"arn:aws:bedrock:us-east-1:742752463290:application-inference-profile/wtv4phtvp7i1",
+			"arn:aws:bedrock:us-east-1:742752463290:application-inference-profile/y9sbkw911b2k"
 		]
 	},
 	{

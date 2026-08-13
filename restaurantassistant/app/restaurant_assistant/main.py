@@ -34,6 +34,13 @@ def get_orchestrator_agent():
 async def invoke(payload, context):
     log.info("Invoking Agent.....")
 
+    session_id = context.session_id
+
+    log.info(f"Session ID - {session_id}")
+
+    if not session_id:
+        raise ValueError("session_id is required. Pass --session-id when invoking.")
+
     # Validate chatbot input
     prompt = payload.get("prompt")
 

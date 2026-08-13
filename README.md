@@ -25,8 +25,8 @@ restaurant-collection-group
 
 ============================================Instructions=============================================
 cd infrastructure
-python prereqs/step_1_create_opensearch_collection.py  (Create Encryption Policy, Collection Group and Collection)
-python prereqs/step_2-create_knowledge_base_restaurant-assistant-kb.py
+python prerequisites/step_1_create_opensearch_collection.py  (Create Encryption Policy, Collection Group and Collection)
+python prerequisites/step_2-create_knowledge_base_restaurant-assistant-kb.py
 
 
 ============================================Scripts=============================================
@@ -35,16 +35,16 @@ restaurant-assistant-kb
 restaurant-policies-kb
 
 cd infrastructure
-python prereqs/step_1_create_opensearch_collection.py
-python prereqs/step_2-create_knowledge_base_restaurant-assistant-kb.py
-python prereqs/step_2-create_knowledge_base_restaurant-policies-kb.py
+python prerequisites/step_1_create_opensearch_collection.py
+python prerequisites/step_2-create_knowledge_base_restaurant-assistant-kb.py
+python prerequisites/step_2-create_knowledge_base_restaurant-policies-kb.py
 
 if needed after adding/updating/deleting docs in kb_files
-python prereqs/step_22_start_ingestion_job.py
+python prerequisites/step_22_start_ingestion_job.py
 
-python prereqs/step_33_delete_knowledge_base_restaurant-assistant-kb.py
-python prereqs/step_44_delete_knowledge_base_restaurant-policies-kb.py
-python prereqs/step_55_delete_opensearch_collection.py
+python prerequisites/step_33_delete_knowledge_base_restaurant-assistant-kb.py
+python prerequisites/step_44_delete_knowledge_base_restaurant-policies-kb.py
+python prerequisites/step_55_delete_opensearch_collection.py
 
 
 Test Queries against KnowledgeBases (cross check with raw docs in kb_files)
@@ -58,10 +58,10 @@ Test Queries against KnowledgeBases (cross check with raw docs in kb_files)
 
 cd infrastructure
 Create dynamoDB Table
-python prereqs/dynamodb-restaurant-assistant-create.py
+python prerequisites/dynamodb-restaurant-assistant-create.py
 
 Delete dynamoDB Table
-python prereqs/dynamodb-restaurant-assistant-delete.py
+python prerequisites/dynamodb-restaurant-assistant-delete.py
 ============================================Assets Created===========================================
 
 ============================================Assets Created===========================================
@@ -97,8 +97,51 @@ kb_execution_role_name = f"BedrockExecutionRoleForKB_restaurant-assistant-kb_{se
     aoss:WriteDocument
     aoss:DescribeIndex
 
+
+===============================================Testcases=============================================================
+agentcore dev  (for troubleshooting purposes. Run from (.venv)  MultiAgent-With-RAG-Demo\restaurantassistant> agentcore dev
+
+streamlit run ui/non_streaming/demo_app.py
+streamlit run ui/streaming/demo_app.py
+
+Orchestrator Agent
+	Policies Agent
+	Restaurant Agent
+
+Hi
+
+Uses Policies Agent > Policies KnowledgeBase
+	What is the policy regarding TIPS for large groups?
+
+Uses Policies Agent > Policies KnowledgeBase (Semantic Retrieval Test)
+	If I bring seven friends with me for dinner, will the restaurant automatically add a service charge to our check?
+
+what did i just asked you?  (Chatbot remembers since we are using same sessionid)
+
+
+Uses Restaurant Agent > Restaurant Assistant Knowledgebase Test
+    What restaurants are in San Francisco?
+
+Restaurant Agent  > Other Methods Test
+	List all the bookings
+	I want to book a table for 4 people for tomorrow at 6 PM for John Doe?
+	Delete my booking for NutriDine
+
+
+Reload Broswer
+what did i just asked you? (agent doesn't remember. sessionid got reset)
+
+Updated system prompts to fix errors/issues found during testing. May need to update more if other issues are found.
+Hints:
+agentcore dev (if it doesn't show any tooluse, then orchestrator prompt is possibly the issue since request did not get routed)
+Ask agent to explain his reasoning as to why he said something
+Most issues are prompt optimization
 ============================================================================================================
 ***Notes***
+
+StreamLit UI (Local)  ==> calling AgentCore Runtime (Agents deployed here)
+
+Streaming Vs Non-Streaming Versions
 
 Using Claude Sonnet 4.6. Can also upgrade to Claude Sonnet 5 OR use Clade Opus 4.8
 

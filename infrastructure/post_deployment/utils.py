@@ -34,14 +34,8 @@ def attach_inline_policy(role_arn, policy_file, policy_name: str = "InlinePolicy
 
 if __name__ == "__main__":
     # Attach the inline policy to AgentCore Runtime execution role which AgentCore Runtime assumes to run an agent
+    # (infrastructure)  MultiAgent-With-RAG-Demo\infrastructure\post_deployment> uv run utils.py
 	attach_inline_policy(
     role_arn="arn:aws:iam::742752463290:role/AgentCore-restaurantassis-ApplicationAgentRestauran-Nmpr715x73h6",
     policy_file="agentcore-extra-inline-policy.json",
     policy_name="ExtraInlinePolicy")
-
-
-# 	# restaurant-assistant-kb-id  L19PD9QCH9
-#     # restaurant-policies-kb-id   WGLZD3BW3C
-#     print(get_kb_id("restaurant-assistant-kb"))
-#     print()  # blank line
-#     print(get_kb_id("restaurant-policies-kb"))
