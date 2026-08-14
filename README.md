@@ -672,7 +672,6 @@ Invoke the AgentCore runtime:
 ```powershell
 agentcore invoke "What's the return policy for accessories?" --session-id $SESSION_ID --bearer-token "$TOKEN" --stream
 ```
-
 <br>
 
 ## Folder Hierarchy
