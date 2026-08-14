@@ -195,7 +195,7 @@ uv run utils.py
 
 ---
 
-### 3. Run the Streamlit UI
+### 3. Run the Streamlit UI (Demo Mode)
 
 The Streamlit UI runs locally and invokes the agents deployed to **AgentCore Runtime**.
 
@@ -215,6 +215,18 @@ streamlit run ui/non_streaming/demo_app.py
 
 ```bash
 streamlit run ui/streaming/demo_app.py
+```
+
+### 4. Run AgentCore Dev (Troubleshooting Mode)
+
+From the following folder:
+
+```text
+MultiAgent-With-RAG-Demo\restaurantassistant
+```
+
+```powershell
+agentcore dev
 ```
 
 ---
@@ -613,3 +625,109 @@ Amazon OpenSearch Serverless
 ```
 
 The Lambda function acts as the trigger for the Knowledge Base ingestion job. The actual document parsing, chunking, embedding generation, and vector-store synchronization continue to be handled by the **Amazon Bedrock Knowledge Base ingestion process**.
+
+
+## Reference Commands for Windows 11
+
+### AWS
+
+```powershell
+aws login
+
+aws configure get region
+aws configure list
+aws sts get-caller-identity
+```
+
+### Python
+
+```powershell
+where.exe python
+```
+
+### Activate Virtual Environment
+
+From:
+
+```text
+MultiAgent-With-RAG-Demo\restaurantassistant\app\restaurant_assistant
+```
+
+Run:
+
+```powershell
+.venv\Scripts\Activate
+```
+
+### AgentCore
+
+Create a new session ID:
+
+```powershell
+$SESSION_ID = [guid]::NewGuid().ToString()
+```
+
+Invoke the AgentCore runtime:
+
+```powershell
+agentcore invoke "What's the return policy for accessories?" --session-id $SESSION_ID --bearer-token "$TOKEN" --stream
+```
+
+<br>
+
+## Folder Hierarchy
+
+```text
+MULTIAGENT-WITH-RAG-DEMO/
+├── infrastructure/                  # Pre-requisite and post-deployment scripts
+│
+├── restaurantassistant/             # AgentCore with Strands App
+│   ├── agentcore/                   # AgentCore folder
+│   │
+│   ├── app/                         # Strands App
+│   │   └── restaurant_assistant/
+│   │       ├── agents/
+│   │       ├── constants/
+│   │       ├── mcp_client/
+│   │       ├── model/
+│   │       ├── skills/
+│   │       ├── ui/
+│   │       ├── utils/
+│   │       ├── .gitignore
+│   │       ├── main.py              # AgentCore entrypoint
+│   │       ├── orchestrator_agent.py
+│   │       ├── pyproject.toml
+│   │       ├── README.md
+│   │       └── uv.lock
+│   │
+│   ├── AGENTS.md
+│   └── README.md
+│
+├── .gitignore
+├── Architecture-Diagram.md
+├── Architecture-Diagram.svg
+└── README.md
+```
+
+<br>
+
+
+## Project Installation (After Cloning the Repository)
+
+1. From the `infrastructure` folder (same level as `pyproject.toml`), run:
+
+   ```powershell
+   uv sync
+   ```
+
+2. From the `restaurantassistant/agentcore/cdk` folder (CDK is an npm-based project), run:
+
+   ```powershell
+   npm install
+   ```
+
+3. From the `restaurantassistant/app/restaurant_assistant` folder (same level as `pyproject.toml`), run:
+
+   ```powershell
+   uv sync
+   ```
