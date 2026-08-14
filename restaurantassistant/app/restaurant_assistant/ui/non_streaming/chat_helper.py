@@ -17,41 +17,6 @@ class ChatMessage:
         self.role = role
         self.text = text
 
-def invoke_agent_runtime(agent_arn, payload, session_id):
-    """Invokes an Amazon Bedrock AgentCore Runtime."""
-
-    response = agentcore_client.invoke_agent_runtime(
-        agentRuntimeArn=agent_arn,
-        qualifier="DEFAULT",
-        runtimeSessionId=session_id,
-        payload=payload
-    )
-
-    if "text/event-stream" in response.get("contentType", ""):
-
-        for line in response["response"].iter_lines(chunk_size=10):
-            if line:
-                line = line.decode("utf-8")
-
-                if line.startswith("data: "):
-                    line = line[6:]
-
-                    try:
-                        data = json.loads(line)
-
-                        if isinstance(data, dict):
-                            event = data.get("event", "")
-                            contentBlockDelta = event.get(
-                                "contentBlockDelta", ""
-                            )
-                            delta = contentBlockDelta.get("delta", "")
-                            text = delta.get("text", "")
-
-                            if text:
-                                yield text
-
-                    except Exception:
-                        pass
 
 def chat_with_agent(message_history, session_id, new_text=None):
     """Sends a message to the Orchestrator in AgentCore Runtime"""
@@ -61,19 +26,23 @@ def chat_with_agent(message_history, session_id, new_text=None):
 
     payload = json.dumps({"prompt": new_text}).encode("utf-8")
 
-	# AgentCore returns a StreamingBody.
+    response = agentcore_client.invoke_agent_runtime(
+        agentRuntimeArn=AGENT_RUNTIME_ARN,
+        runtimeSessionId=session_id,
+        qualifier="DEFAULT",
+        payload=payload
+    )
+
+
+# AgentCore returns a StreamingBody.
     # Yield each piece so Streamlit can display it.
     full_response = ""
 
-    # Invoke AgentCore and stream the response
-    for text in invoke_agent_runtime(
-        AGENT_RUNTIME_ARN,
-        payload,
-        session_id
-    ):
+    for chunk in response["response"]:
+        text = chunk.decode("utf-8")
+
         full_response += text
 
-        # Stream this text to Streamlit
         yield text
 
     response_message = ChatMessage("assistant", text=full_response)

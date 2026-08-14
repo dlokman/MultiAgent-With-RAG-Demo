@@ -4,6 +4,7 @@ import uuid
 import streamlit as st
 import chat_helper as chathelper
 
+
 st.set_page_config(page_title="Restaurant Chatbot")
 
 st.title("Restaurant Chatbot")
@@ -16,7 +17,7 @@ if "chat_history" not in st.session_state: # see if the chat history hasn't been
 
 # Create one AgentCore Runtime session ID for this Streamlit session
 if "agentcore_session_id" not in st.session_state:
-    st.session_state.agentcore_session_id = str(uuid.uuid4())
+    st.session_state.agentcore_session_id = str(uuid.uuid4())  # eg 550e8400-e29b-41d4-a716-446655440000
 
 chat_container = st.container()
 
@@ -35,12 +36,26 @@ if input_text:
     with chat_container.chat_message("user"):
         st.markdown(input_text)
 
-    with st.spinner("Thinking..."):
-        response_stream = chathelper.chat_with_agent(
-            message_history=st.session_state.chat_history,
-            session_id=st.session_state.agentcore_session_id,
-            new_text=input_text
-        )
+    response_stream = chathelper.chat_with_agent(
+        message_history=st.session_state.chat_history,
+        session_id=st.session_state.agentcore_session_id,
+        new_text=input_text
+    )
 
-        with chat_container.chat_message("assistant"):
-            st.write_stream(response_stream)
+    # Spinner exists only while waiting for first response chunk
+    with st.spinner("Thinking..."):
+        try:
+            first_chunk = next(response_stream)
+        except StopIteration:
+            first_chunk = None
+
+    # Spinner is gone at this point
+    with chat_container.chat_message("assistant"):
+
+        if first_chunk:
+
+            def stream_response():
+                yield first_chunk
+                yield from response_stream
+
+            st.write_stream(stream_response())
