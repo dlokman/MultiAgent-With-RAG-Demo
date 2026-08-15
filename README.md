@@ -685,6 +685,16 @@ Run:
 deactivate
 ```
 
+### Troubleshoot Deployment Issues
+
+
+Run:
+
+```text
+agentcore deploy -v
+```
+
+
 ### AgentCore
 
 Create a new session ID:
