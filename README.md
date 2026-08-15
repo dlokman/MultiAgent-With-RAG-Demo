@@ -758,7 +758,7 @@ MULTIAGENT-WITH-RAG-DEMO/
 2. From the `restaurantassistant/agentcore/cdk` folder (CDK is an npm-based project), run:
 
    ```powershell
-   npm install
+   npm ci (installs exactly from the package-lock.json)
    ```
 
 3. From the `restaurantassistant/app/restaurant_assistant` folder (same level as `pyproject.toml`), run:
