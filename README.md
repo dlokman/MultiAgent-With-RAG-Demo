@@ -645,6 +645,23 @@ aws sts get-caller-identity
 where.exe python
 ```
 
+## Select Python Interpreter in VS Code
+
+1. Press `Ctrl + Shift + P`.
+
+2. Select:
+
+   `Python: Select Interpreter` > `Enter Interpreter Path` > `Browse`
+
+3. Navigate to:
+
+   ```text
+   MultiAgent-With-RAG-Demo\restaurantassistant\app\restaurant_assistant\.venv\Scripts
+   ```
+
+4. Select `python.exe`.
+
+
 ### Activate Virtual Environment
 
 From:
@@ -657,6 +674,15 @@ Run:
 
 ```powershell
 .venv\Scripts\Activate
+```
+
+### Deactivate Virtual Environment
+
+
+Run:
+
+```powershell
+deactivate
 ```
 
 ### AgentCore
