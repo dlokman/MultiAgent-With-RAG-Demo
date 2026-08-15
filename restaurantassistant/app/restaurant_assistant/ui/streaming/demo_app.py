@@ -36,16 +36,19 @@ if input_text:
     with chat_container.chat_message("user"):
         st.markdown(input_text)
 
+	# will stream the response chunk by chunk from AgentCore Runtime
     response_stream = chathelper.chat_with_agent(
         message_history=st.session_state.chat_history,
         session_id=st.session_state.agentcore_session_id,
         new_text=input_text
     )
 
+    # control moves here immediately after the above call
+
     # Spinner exists only while waiting for first response chunk
     with st.spinner("Thinking..."):
         try:
-            first_chunk = next(response_stream)
+            first_chunk = next(response_stream) # block/wait until response_stream yields its first value
         except StopIteration:
             first_chunk = None
 
@@ -55,7 +58,7 @@ if input_text:
         if first_chunk:
 
             def stream_response():
-                yield first_chunk
-                yield from response_stream
+                yield first_chunk           # Yield the first chunk
+                yield from response_stream  # Yield the remaining chunks as they arrive
 
             st.write_stream(stream_response())

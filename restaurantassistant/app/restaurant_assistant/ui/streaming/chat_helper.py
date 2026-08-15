@@ -41,14 +41,12 @@ def invoke_agent_runtime(agent_arn, payload, session_id):
 
                         if isinstance(data, dict):
                             event = data.get("event", "")
-                            contentBlockDelta = event.get(
-                                "contentBlockDelta", ""
-                            )
+                            contentBlockDelta = event.get("contentBlockDelta", "")
                             delta = contentBlockDelta.get("delta", "")
                             text = delta.get("text", "")
 
                             if text:
-                                yield text
+                                yield text   # yield sends that piece of text back to the caller immediately, then pauses this function at that point.
 
                     except Exception:
                         pass
@@ -73,9 +71,10 @@ def chat_with_agent(message_history, session_id, new_text=None):
     ):
         full_response += text
 
-        # Stream this text to Streamlit
+        # Pause here and yield this text to the caller chunk by chunk
         yield text
 
+	# Below code does not execute until the for loop above is complete, which means the entire response has been received from AgentCore.
     response_message = ChatMessage("assistant", text=full_response)
 
     # Store complete assistant response in chat history

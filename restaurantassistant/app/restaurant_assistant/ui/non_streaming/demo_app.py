@@ -36,11 +36,11 @@ if input_text:
         st.markdown(input_text)
 
     with st.spinner("Thinking..."):
-        response_stream = chathelper.chat_with_agent(
+        response = chathelper.chat_with_agent(
             message_history=st.session_state.chat_history,
             session_id=st.session_state.agentcore_session_id,
             new_text=input_text
         )
 
         with chat_container.chat_message("assistant"):
-            st.write_stream(response_stream)
+          	st.markdown(response)

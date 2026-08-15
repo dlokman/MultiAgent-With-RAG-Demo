@@ -33,19 +33,15 @@ def chat_with_agent(message_history, session_id, new_text=None):
         payload=payload
     )
 
+    # Read AgentCore response
+    response_body = response["response"].read()
+    result = json.loads(response_body)
 
-# AgentCore returns a StreamingBody.
-    # Yield each piece so Streamlit can display it.
-    full_response = ""
+    # Extract assistant text
+    assistant_text = result["content"][0]["text"]
 
-    for chunk in response["response"]:
-        text = chunk.decode("utf-8")
-
-        full_response += text
-
-        yield text
-
-    response_message = ChatMessage("assistant", text=full_response)
-
-    # Store complete assistant response in chat history
+    # Store assistant response in chat history
+    response_message = ChatMessage("assistant", text=assistant_text)
     message_history.append(response_message)
+
+    return assistant_text

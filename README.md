@@ -730,3 +730,35 @@ MULTIAGENT-WITH-RAG-DEMO/
    ```powershell
    uv sync
    ```
+<br>
+<br>
+
+## 🧪 Testcases
+
+```text
+
+Hi
+What is the policy regarding TIPS for large groups?         <====== Policies Agent > Policies KnowledgeBase <=== Payment_Policies.docx
+If I bring seven friends with me for dinner, will the restaurant automatically add a service charge to our check? <==== Sematic Retrieval Test > Policies Agent > Policies KnowledgeBase
+What did i just asked you?                                  <====== Using same sessionid - chatbot remembers
+What restaurants are in San Francisco?                      <====== Restaurant Agent > Restaurant Assistant Knowledgebase/OpenSearch VectorDB <== Restaurant Directory.docx
+List all the restaurant bookings                            <======  Restaurant Agent > list_all_bookings
+Provide list of all the restaurants                         <====== Restaurant Agent > Restaurant Assistant Knowledgebase/OpenSearch VectorDB   <== Restaurant Directory.docx
+Provide all the menu for NutriDine restaurant                <====== Restaurant Agent > Restaurant Assistant Knowledgebase/OpenSearch VectorDB   <== NutriDine.docx
+I want to book a table for 4 people for tomorrow at 6 PM for John Doe <======  Restaurant Agent > create_booking
+Create a booking at NutriDine restaurant
+Get my booking details for NutriDine				       <======  Restaurant Agent > get_booking_details
+Delete my booking for NutriDine                            <======  Restaurant Agent > delete_booking
+
+Can you create a booking at Fogo De Chao restaurant for me?  (not in the list)   <======= Restaurant Agent > Restaurant Assistant Knowledgebase (list of restaurants)
+
+Reload Browswer and prompt:
+what did i just asked you? (Agent doesn't remember. sessionid got reset)
+
+***Ingestion Demo***
+Files at: Demo-Project-1\infrastructure\prereqs\kb_files
+Provide all the menu for Agave restaurant         ==> Show KnowledgeBase
+Ingest Ember Word Document to OpenSearch VectorDB ==> Show KnowledgeBase - instructions at infrastructure/prerequisites/step_22_start_ingestion_job.py
+Provide all the menu for Agave restaurant
+
+```
