@@ -716,7 +716,7 @@ MULTIAGENT-WITH-RAG-DEMO/
 1. From the `infrastructure` folder (same level as `pyproject.toml`), run:
 
    ```powershell
-   uv sync
+   uv sync    (creates .venv virtual environment as well)
    ```
 
 2. From the `restaurantassistant/agentcore/cdk` folder (CDK is an npm-based project), run:
@@ -728,7 +728,7 @@ MULTIAGENT-WITH-RAG-DEMO/
 3. From the `restaurantassistant/app/restaurant_assistant` folder (same level as `pyproject.toml`), run:
 
    ```powershell
-   uv sync
+   uv sync    (creates .venv virtual environment as well)
    ```
 <br>
 <br>

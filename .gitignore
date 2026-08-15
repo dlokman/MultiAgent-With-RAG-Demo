@@ -220,3 +220,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# AgentCore CLI CDK source code - must be committed
+!restaurantassistant/agentcore/cdk/lib/
+!restaurantassistant/agentcore/cdk/lib/**
