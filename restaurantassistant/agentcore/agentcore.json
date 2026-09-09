@@ -15,7 +15,17 @@
       "codeLocation": "app/restaurant_assistant/",
       "runtimeVersion": "PYTHON_3_14",
       "networkMode": "PUBLIC",
-      "protocol": "HTTP"
+      "protocol": "HTTP",
+	  "requestHeaderAllowlist": [
+		"Authorization"
+	    ],
+	   "authorizerType": "CUSTOM_JWT",
+	   "authorizerConfiguration": {
+			"customJwtAuthorizer": {
+				"discoveryUrl": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_UqVgmTUWo/.well-known/openid-configuration",
+				"allowedClients": ["48rmngdj0llmlglsj2ttjothee"]
+			}
+	   }
     }
   ],
   "memories": [],
