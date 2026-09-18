@@ -1,10 +1,10 @@
-# Multi-Agent With RAG Demo (AgentCore with Strands Agents)
+# 🤖🤖 Multi-Agent With RAG Demo (AgentCore with Strands Agents)
 
 This is a Restaurant Chatbot Demo of Multi-Agents with RAG.
 
 This project combines both **GenAI** and **Agentic AI**.
 
-## Tech Stack
+## 🧰 Tech Stack
 - **Architecture:** AWS-Native Tech Stack
 - **Project Setup:** UV-based project created using the AgentCore CLI
 - **Hosting Platform:** Amazon Bedrock AgentCore
@@ -627,7 +627,7 @@ Amazon OpenSearch Serverless
 The Lambda function acts as the trigger for the Knowledge Base ingestion job. The actual document parsing, chunking, embedding generation, and vector-store synchronization continue to be handled by the **Amazon Bedrock Knowledge Base ingestion process**.
 
 
-## Reference Commands for Windows 11
+## 🪟 Reference Commands for Windows 11
 
 ### AWS
 
@@ -645,7 +645,7 @@ aws sts get-caller-identity
 where.exe python
 ```
 
-## Select Python Interpreter in VS Code
+## 🐍 Select Python Interpreter in VS Code
 
 1. Press `Ctrl + Shift + P`.
 
@@ -710,7 +710,7 @@ agentcore invoke "What's the return policy for accessories?" --session-id $SESSI
 ```
 <br>
 
-## Folder Hierarchy
+## 📁 Folder Hierarchy
 
 ```text
 MULTIAGENT-WITH-RAG-DEMO/
@@ -747,7 +747,7 @@ MULTIAGENT-WITH-RAG-DEMO/
 <br>
 
 
-## Project Installation (After Cloning the Repository)
+## ⚙️ Project Installation (After Cloning the Repository)
 
 1. From the `infrastructure` folder (same level as `pyproject.toml`), run:
 
