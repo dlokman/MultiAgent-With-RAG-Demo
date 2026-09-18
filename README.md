@@ -788,13 +788,12 @@ Delete my booking for NutriDine                            <======  Restaurant A
 
 Can you create a booking at Fogo De Chao restaurant for me?  (not in the list)   <======= Restaurant Agent > Restaurant Assistant Knowledgebase (list of restaurants)
 
-Reload Browswer and prompt:
-what did i just asked you? (Agent doesn't remember. sessionid got reset)
+Reload Browswer and prompt: what did i just asked you?      <======= Agent doesn't remember. sessionid got reset)
 
 ***Ingestion Demo***
 Files at: Demo-Project-1\infrastructure\prereqs\kb_files
-Provide all the menu for Agave restaurant         ==> Show KnowledgeBase
-Ingest Ember Word Document to OpenSearch VectorDB ==> Show KnowledgeBase - instructions at infrastructure/prerequisites/step_22_start_ingestion_job.py
+Provide all the menu for Agave restaurant                   <======= Show KnowledgeBase
+Ingest Ember Word Document to OpenSearch VectorDB           <======= Show KnowledgeBase - instructions at infrastructure/prerequisites/step_22_start_ingestion_job.py
 Provide all the menu for Agave restaurant
 
 ```
