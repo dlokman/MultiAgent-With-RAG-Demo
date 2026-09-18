@@ -773,7 +773,7 @@ MULTIAGENT-WITH-RAG-DEMO/
 
 ```text
 
-Hi
+Hi, What can you do?
 What is the policy regarding TIPS for large groups?         <====== Policies Agent > Policies KnowledgeBase <=== Payment_Policies.docx
 If I bring seven friends with me for dinner, will the restaurant automatically add a service charge to our check? <==== Sematic Retrieval Test > Policies Agent > Policies KnowledgeBase
 What did i just asked you?                                  <====== Using same sessionid - chatbot remembers
