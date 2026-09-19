@@ -18,7 +18,7 @@ This project combines both **GenAI** and **Agentic AI**.
   - Amazon S3
   - Streamlit
 
-<a id="architecture"></a>
+<a id="architecture-diagram"></a>
 ## 🏗️ Architecture Overview
 ![architecture](Architecture-Diagram.svg)
 
