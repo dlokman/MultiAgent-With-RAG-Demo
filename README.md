@@ -18,6 +18,7 @@ This project combines both **GenAI** and **Agentic AI**.
   - Amazon S3
   - Streamlit
 
+<a id="architecture"></a>
 ## 🏗️ Architecture Overview
 ![architecture](Architecture-Diagram.svg)
 
@@ -195,7 +196,7 @@ uv run utils.py
 
 ---
 
-### 3. Run the Streamlit UI (Demo Mode)
+### 3. Run the Streamlit UI (Quick Testing. A seperate Github repo is used for Angular Frontend layer)
 
 The Streamlit UI runs locally and invokes the agents deployed to **AgentCore Runtime**.
 
